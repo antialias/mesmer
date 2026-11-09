@@ -1,0 +1,14 @@
+Mesmer
+Copyright 2026 Thomas Hallock
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Mesmer is an unofficial X-Plane plugin for Brunner CLS-E yokes. It is not
+made, endorsed or supported by, or affiliated with, Brunner Elektronik AG or
+Laminar Research. Brunner, CLS-E and CLS2Sim are names of Brunner Elektronik
+AG; X-Plane is a trademark of Laminar Research. They are used here only to say
+what the plugin works with.
+
+The X-Plane SDK is not part of this repository or its releases' source. The
+build downloads it from developer.x-plane.com, checks it against a pinned
+SHA-256, and uses it under its own licence, which the SDK carries.

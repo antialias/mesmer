@@ -1,0 +1,20 @@
+title: "[Simulator] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The models, solver and supervisor are portable C++ with no X-Plane in them; only the plugin layer is X-Plane's.
+        Which simulator would you bring them to, and what does it offer a plugin?
+  - type: input
+    id: sim
+    attributes:
+      label: Simulator
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What it exposes, and what you'd do
+      description: Its plugin or SDK interface, the data it provides (airspeed, surfaces, trim), and whether you'd write the port.
+    validations:
+      required: true

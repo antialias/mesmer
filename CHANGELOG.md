@@ -1,0 +1,64 @@
+# Changelog
+
+Versions are `0.1.0-alpha.N` while Mesmer is a preview. Each is a GitHub
+pre-release with a Windows zip, its SHA-256 in `SHA256SUMS`, and a build
+provenance attestation.
+
+## 0.1.0-alpha.1
+
+The first public preview: the plugin as it is flown today, published to find
+testers and developers. No features were added for it.
+
+**Requirements.** Windows x64, X-Plane 12, and the original Brunner CLS-E yoke
+on USB with controller firmware v367. CLS2Sim must be closed. Tested on one
+yoke.
+
+**The yoke as a control**
+
+- Pitch and roll in every aircraft, written straight into X-Plane, with no
+  bindings to set up and no program beside X-Plane.
+- Finds the yoke and keeps looking, once a second, if it is off or
+  unplugged.
+- Centres the yoke when X-Plane is running steadily and the yoke has been
+  still for a second, after showing *Yoke centring - hands off*.
+- Carries on by itself through pause and resume, aircraft changes, the yoke
+  switched off and on, and the USB cable pulled and replugged.
+- After a controller fault, stops the motors and recovers by itself up to
+  twice, then asks for one *Retry*.
+- One status text, with what is wrong and what to do, in the menu, a
+  clickable corner line, the feel card and the feel page.
+- Refuses controllers with other firmware before sending anything that
+  moves them.
+
+**Force feel (experimental, off by default)**
+
+- Pitch follows a model of the elevator's hinge moment: its weight, the air
+  over the tail including propwash, the trim tab, the tail's angle of attack
+  and stall, and air from behind.
+- Roll follows a model of both ailerons' hinge moments through the wheel's
+  linkage, from the air over each wing's own panels.
+- A solver sets the drive each update so the yoke rests exactly where the
+  model says, with the model's force under your hand up to the drive's own
+  limit, kept about 11% under its protection limit.
+- Trim moves the yoke's resting point; X-Plane's trim is read, never written.
+- Every aircraft flies the Cessna 172 SP's figures from
+  `BrunnerDirect.profiles.json`, each with its value, tag and source. The
+  file is reread within two seconds of a change.
+- Optional stall buffet, off by default and untested with the motors on.
+
+**Seeing and tuning it**
+
+- The feel card in X-Plane: the elevator and ailerons as the plugin sees them.
+- The feel page on port 8087 of the local network: the model live, every
+  figure as a knob, Save, Undo, Revert, marks, two minutes of history, and
+  *Stop yoke motors*.
+- Commands for binding: `brunner_direct/stop_motors`, `recenter`,
+  `toggle_force_feel`, `force_feel_on`, `force_feel_off`,
+  `toggle_status_line`, `pin_hud`, `mark_feel`, `compare_feel`.
+
+**Release defaults.** The yoke waits for your first *Retry* after X-Plane
+starts (`auto_start=0`), and force feel is off (`force_feel=0`).
+
+**Known limits.** The yoke's own buttons and hat are not read. The force
+calibration (pounds at the grip) is worked out, not measured. Only one
+aircraft has its own profile.

@@ -1,0 +1,33 @@
+name: Aircraft profile request
+description: Ask for an aircraft's own force-feel profile, or offer one.
+labels: [aircraft-profile]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every aircraft flies the Cessna 172's figures until it has its own profile.
+        The format: [configuration](https://github.com/antialias/mesmer/blob/main/docs/configuration.md).
+        How to write one: [CONTRIBUTING](https://github.com/antialias/mesmer/blob/main/CONTRIBUTING.md#writing-an-aircraft-profile).
+  - type: input
+    id: aircraft
+    attributes:
+      label: Aircraft
+      description: Its name, maker (Laminar or third party), and its .acf path under the X-Plane folder.
+      placeholder: "Aircraft/Laminar Research/Beechcraft Baron 58/Baron_58.acf"
+    validations:
+      required: true
+  - type: textarea
+    id: figures
+    attributes:
+      label: Figures you know, with sources
+      description: Elevator and aileron area, chord, travel, trim tab travel, yoke travel, balance. Say where each comes from.
+  - type: textarea
+    id: profile
+    attributes:
+      label: A profile, if you've written one
+      render: json
+  - type: textarea
+    id: feel
+    attributes:
+      label: What the 172's figures feel like in this aircraft
+      description: If you've flown it with force feel on.

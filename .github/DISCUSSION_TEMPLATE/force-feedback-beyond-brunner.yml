@@ -1,0 +1,13 @@
+title: "[Force feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Mesmer's control-surface models only describe forces; the yoke is one way to make them.
+        Other force-feedback hardware, other control loops, or the physics itself belong here.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea, hardware or question
+    validations:
+      required: true

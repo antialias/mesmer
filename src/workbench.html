@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Yoke feel</title>
+<style>
+:root{--page:#15181c;--panel:#1d2228;--line:#2c333b;--text:#e8ebee;--muted:#8b949e;--amber:#f2a93b;--red:#e5484d;--green:#3fb950;--grey:#6e7681;--blue:#58a6ff;--weight:#c9d0d6;--tab:#3fb950}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--page);color:var(--text);font:26px/1.3 -apple-system,"Segoe UI",Inter,sans-serif;font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;touch-action:manipulation;min-height:48px;border-radius:10px}
+button:disabled{cursor:default;opacity:.35}
+input{font:inherit;color:inherit;-webkit-user-select:text;user-select:text}
+.hide{display:none!important}
+.cap{font-size:20px;color:var(--muted)}
+.cap.amb{color:var(--amber)}
+#cmp.on{border-color:var(--amber);color:var(--amber)}
+#app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding:0 20px 0;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+/* top bar */
+#top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px;min-height:64px;padding:6px 0;border-bottom:1px solid var(--line);margin:0 -20px;padding-left:24px;padding-right:12px}
+#top .l{display:flex;align-items:baseline;gap:22px;min-width:0;white-space:nowrap}
+#title{font-size:32px;font-weight:600}
+#craft{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+#pill{justify-self:center;display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:10px;padding:6px 22px;min-height:48px;max-width:500px;color:#c9d0d6}
+.dot{width:16px;height:16px;border-radius:50%;flex:none;background:var(--green)}
+.dot.amber{background:var(--amber)}.dot.red{background:var(--red)}.dot.grey{background:var(--grey)}
+#stop{justify-self:end;padding:0 32px;min-height:56px;background:var(--red);color:#fff;white-space:nowrap}
+#stop.lbl{background:none;border:1px solid #4a525c;color:var(--muted);cursor:default;opacity:1}
+/* compare bar */
+#bar{display:flex;align-items:center;gap:8px;padding:16px 0 14px}
+#seg{display:flex;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+#seg button{width:160px;min-height:56px;color:var(--muted);border:2px solid transparent}
+#seg button.on{border-color:var(--amber);color:var(--amber)}
+#nchg{color:var(--muted);padding:0 26px 0 30px;white-space:nowrap}
+.tb{padding:0 22px;white-space:nowrap}
+#keep{background:var(--amber);color:var(--page);padding:0 42px;min-height:56px;margin-left:24px}
+#mark{margin-left:auto;display:flex;align-items:center;gap:16px;border:1px solid var(--line);padding:0 18px 0 36px;min-height:56px}
+#badge{min-width:32px;height:32px;border-radius:16px;background:#3a424c;font-size:20px;display:flex;align-items:center;justify-content:center;padding:0 8px}
+/* notice line (yoke off) */
+#yokeoff{text-align:center;padding:0 0 14px}
+/* panel and columns */
+#panel{flex:none;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+#panel.dim .col{opacity:.55}
+.col{display:flex;flex-direction:column;min-width:0;padding:14px 28px 8px}
+#c-roll{border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 36px;align-items:start}
+#c-roll .ch,#c-roll .sub{grid-column:1/-1}
+#c-roll .rows{align-self:center}
+.ch{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+.ch h2{margin:0;font-size:40px;font-weight:600;line-height:1.1}
+.sub{margin-top:4px}
+.chart{flex:1 1 auto;min-height:150px;margin:6px 0 0;position:relative}
+.chart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.chart text{font-size:20px;fill:var(--muted)}
+.chart .am{fill:var(--amber)}.chart .wh{fill:var(--text)}
+.hit{fill:transparent;touch-action:none;cursor:grab}
+.off .hit{pointer-events:none}
+.off .hdl{opacity:.45}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:54px;padding:3px 6px;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.rows{flex:none}
+.rl{display:flex;align-items:center;gap:16px;min-width:0}
+.cd{width:13px;height:13px;border-radius:50%;background:var(--amber);flex:none}
+.row.wrap{flex-wrap:wrap;row-gap:0;padding-top:8px;padding-bottom:8px}
+.row.wrap>.cap{flex:1 0 100%;line-height:1.3}
+.stp{display:flex;align-items:center;border:1px solid #3a424c;border-radius:10px;flex:none;width:224px;height:50px}
+.stp button{width:60px;min-height:48px;height:48px;font-size:32px;line-height:1;font-weight:300}
+.stp span{flex:1;text-align:center;white-space:nowrap}
+.stp.dis{opacity:.4}
+.stp.dis button{pointer-events:none}
+/* pitch: the elevator model */
+#pgrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:0 32px;align-items:start;margin-top:8px}
+#stage{position:-webkit-sticky;position:sticky;top:0;z-index:5;background:var(--panel);padding:6px 0 10px}
+#stage .figs{display:flex;flex-direction:column;gap:4px}
+#stage svg{display:block;width:100%;height:auto}
+#stage svg text{font-size:24px;fill:var(--muted)}
+#live{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;margin-top:6px;font-size:22px;line-height:1.3}
+#live .k{color:var(--muted)}
+#live .lim{color:var(--amber)}
+#prev{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-top:10px;padding:10px 14px;border:2px solid var(--amber);border-radius:10px}
+#prev .t{flex:1 1 220px;font-size:22px;line-height:1.3}
+#prev button{padding:0 22px;min-height:52px;font-size:22px}
+#ptry{background:var(--amber);color:var(--page)}
+#pclear{border:1px solid #4a525c}
+.blk{border-top:1px solid var(--line);padding:10px 0 12px}
+.blk:first-child{border-top:0;padding-top:0}
+.blk h3{margin:0 0 4px;font-size:26px;font-weight:600}
+.blk svg{display:block;width:100%;height:auto}
+.blk svg text{font-size:18px;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:18px;color:var(--muted);margin-top:2px}
+.legend i{display:inline-block;width:20px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 5px,transparent 5px 9px)!important;height:3px}
+.tag{font-size:17px;border-radius:6px;padding:1px 9px;border:1px solid #4a525c;color:var(--muted);white-space:nowrap}
+.tag.published{border-color:#2f6b3a;color:#7ee08f}
+.tag.guessed{border-color:#7a5a24;color:var(--amber)}
+.frow .rl{flex-wrap:wrap;row-gap:2px}
+.frow .src{font-size:18px}
+.frow.ro{min-height:0}
+#profline{margin:0 0 6px}
+#profline.err{color:var(--red)}
+/* roll: the aileron model's drawing, as aileron.html draws it */
+#rstage{grid-column:1/-1;padding:6px 0 10px}
+#rstage .figs{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:center}
+#rstage svg{display:block;width:100%;height:auto;overflow:visible}
+#rstage svg text{font-size:18px;fill:var(--muted)}
+/* notices */
+.note{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:34px;padding:20px}
+.note p{margin:0;max-width:720px}
+.note .big{font-size:32px;line-height:1.45}
+.note .cap{line-height:1.6;max-width:560px}
+.note .why{font-size:22px;line-height:1.5;max-width:720px}
+.nb{min-width:440px;min-height:72px;border:2px solid var(--amber);color:var(--amber);padding:0 30px}
+.nb.grey{border:1px solid #4a525c;color:var(--text)}
+/* footer */
+#foot{display:flex;align-items:center;justify-content:space-between;min-height:58px;padding-bottom:env(safe-area-inset-bottom)}
+#foot .cap{color:var(--muted)}
+#dbtn{padding:0 16px}
+/* change notices (#nbar, #nlist) and toasts: a change not made by the flight says what made it; nothing to answer */
+#nbar{z-index:20;position:fixed;left:50%;top:74px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 40px);background:var(--panel);border:2px solid var(--amber);border-radius:10px;padding:16px 26px;text-align:center;pointer-events:none;line-height:1.35}
+#nlist{overflow:auto;min-height:0}
+#nlist p{margin:0 0 8px;line-height:1.3}
+#nlist .cap{margin-right:8px}
+#toast,#etoast{z-index:20;position:fixed;left:50%;bottom:6px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--amber);border-radius:10px;padding:16px 30px;white-space:nowrap}
+#etoast{border-color:var(--red);white-space:normal;width:max-content;max-width:calc(100vw - 40px);text-align:center}
+/* not connected */
+body.nc{background:#2a2f35}
+body.nc #title,body.nc #craft{color:#9aa2ab}
+body.nc #pill{color:#b3bac2;border-color:#454c55}
+body.nc .note p{color:#c3c9cf}
+.nc-try{font-style:italic;color:var(--muted)}
+/* details */
+#det{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+@media (orientation:landscape) and (min-width:1001px){body.dt #app{height:100vh;height:100dvh}}
+#dhead{display:flex;align-items:center;gap:56px;padding:6px 0}
+#back{color:var(--amber);padding:0 8px 0 4px;display:flex;align-items:center;gap:10px}
+#dhead h1{margin:0;font-size:32px;font-weight:400}
+#listen{margin-left:auto}
+#dgrid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:.9fr 1fr 1.25fr;gap:16px}
+.dp{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:12px 20px;display:flex;flex-direction:column;min-height:0;min-width:0}
+.dp h2{margin:0 0 6px;font-size:32px;font-weight:400;line-height:1.25}
+#mlist{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.mk{padding:12px 0 14px;border-bottom:1px solid var(--line)}
+.mk:last-child{border-bottom:0}
+.mt{display:flex;align-items:center;gap:20px;font-weight:500}
+.chip{font-size:20px;font-weight:400;background:#343b44;border-radius:6px;padding:3px 12px}
+.mk .cap{margin:4px 0 8px}
+.mk input{width:100%;height:56px;border:1px solid #3a424c;border-radius:10px;background:var(--page);padding:0 16px;outline:none}
+.mk input::placeholder{color:var(--muted)}
+.mk input:focus{border-color:var(--amber)}
+.sc{flex:1 1 0;min-height:70px;position:relative;margin-top:2px}
+.sc svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+svg text{font-size:20px;fill:var(--muted)}
+.lbl26{font-size:26px}
+#xp{border-collapse:collapse;width:100%}
+#xp td,#xp th{padding:3px 0;text-align:left;font-weight:400;white-space:nowrap}
+#xp th{padding-bottom:10px}
+#xp thead tr{border-bottom:1px solid var(--line)}
+#xp tbody tr:first-child td{padding-top:12px}
+#xp td+td,#xp th+th{padding-left:10px}
+#xp .yh td{border-top:1px solid var(--line);padding-top:14px;font-weight:500}
+#strip{flex:none;height:clamp(200px,24vh,260px);margin:14px 0 12px;padding-bottom:8px}
+#strip{position:relative}
+#strip .sc{min-height:0;margin:0}
+.nt{padding:6px 0;line-height:1.25;-webkit-user-select:text;user-select:text}
+@media (orientation:portrait),(max-width:1000px){
+ #top{grid-template-columns:auto auto;row-gap:8px}
+ #top .l{grid-column:1}#stop{grid-column:2;grid-row:1}
+ #pill{grid-column:1/3;grid-row:2;justify-self:start;max-width:100%}
+ #bar{flex-wrap:wrap;row-gap:12px}
+ #seg button{width:130px}
+ #nchg{padding:0 12px}
+ .tb{padding:0 14px}
+ #keep{margin-left:8px;padding:0 30px}
+ #dgrid{grid-template-columns:1fr 1fr}
+ #dgrid .dp:first-child{grid-column:1/3;min-height:260px}
+ #dspring{min-height:520px}
+ /* the drawing pins to the top while the charts and controls scroll under it */
+ #pgrid{grid-template-columns:minmax(0,1fr)}
+ #stage{margin:0 -28px;padding:6px 28px 8px;box-shadow:0 12px 14px -12px #000}
+ #stage .figs{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:center}
+ #stage svg text{font-size:34px}
+ #c-roll{grid-template-columns:minmax(0,1fr)}
+ #rstage svg{overflow:hidden}
+ #rstage svg text{font-size:26px}
+ #rstage .stopl,#rstage .dup{display:none} /* the rows below give the numbers */
+}
+@media (max-width:600px){
+ body{font-size:20px}
+ #app{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+ #top{margin:0 -10px;padding-left:12px;padding-right:8px;gap:8px}
+ #title{font-size:24px}
+ #stop{padding:0 14px;min-height:48px}
+ #bar{gap:4px;padding:10px 0}
+ #keep{margin-left:4px;padding:0 18px;min-height:48px}
+ #mark{padding:0 10px 0 16px;min-height:48px;gap:8px}
+ .tb{padding:0 10px}
+ .col{padding:10px 12px 6px}
+ .ch h2{font-size:30px}
+ .cap{font-size:16px}
+ #stage{margin:0 -12px;padding:2px 12px 6px;background:var(--page)}
+ #stage .figs{display:flex;gap:0}
+ #stage svg text{font-size:30px}
+ #stage #tail{height:118px}
+ #stage #yokes{height:72px}
+ .lg{display:none}
+ #prev{flex-wrap:nowrap}
+ #prev .t{flex:1 1 0}
+ #live{font-size:16px;gap:1px 10px;margin-top:2px}
+ #prev{padding:6px 10px;margin-top:6px}
+ #prev .t{font-size:16px}
+ #prev button{min-height:44px;font-size:17px;padding:0 14px}
+ .blk h3{font-size:21px}
+ .blk svg text{font-size:24px}
+ .legend{font-size:15px}
+ .row{gap:10px;padding:3px 0}
+ .stp{width:168px;height:46px}
+ .stp button{width:46px;min-height:44px;height:44px;font-size:28px}
+ .tag{font-size:14px}
+ .frow .src{font-size:15px}
+ #dgrid{grid-template-columns:1fr}
+ #dgrid .dp:first-child{grid-column:auto}
+ #rstage{padding:2px 0 6px}
+ #rstage .figs{display:flex;flex-direction:column;gap:0}
+ #rstage svg text{font-size:30px}
+ #rstage #rwings{height:150px}
+ #rstage #rwheel{height:120px}
+ #rstage .dup,#rstage .stopl,#rstage .legend{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+ <header id="top">
+  <div class="l"><span id="title">Yoke feel</span><span id="craft"></span></div>
+  <div id="pill"><span class="dot" id="sdot"></span><span id="stext"></span></div>
+  <button id="stop">Stop yoke motors</button>
+ </header>
+
+ <main id="feel" class="hide" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column">
+  <div id="bar">
+   <button class="tb" id="cmp">Feel saved</button>
+   <span id="nchg"></span>
+   <button class="tb" id="undo">Undo</button>
+   <button class="tb" id="discard">Revert</button>
+   <button id="keep">Save</button>
+   <button id="mark"><span>Mark</span><span id="badge">0</span></button>
+  </div>
+  <p id="yokeoff" class="hide" style="margin:0">You can still change settings. They apply when the yoke is back.</p>
+  <section id="panel">
+   <div class="col" id="c-pitch">
+    <div class="ch"><h2>Pitch</h2><span class="nowf"></span></div>
+    <div class="cap sub"></div>
+    <div id="pgrid">
+     <div id="stage">
+      <div class="figs">
+       <svg id="tail" viewBox="0 0 800 300" aria-label="The tail from the right side"></svg>
+       <svg id="yokes" viewBox="0 0 800 170" aria-label="The yoke's fore and aft travel"></svg>
+      </div>
+      <div id="live"></div>
+      <div id="prev" class="hide"><span class="t" id="ptx"></span><button id="ptry">Try<span class="lg"> on the yoke</span></button><button id="pclear">Clear<span class="lg"> preview</span></button></div>
+     </div>
+     <div id="pside">
+      <div class="blk"><h3>Force across the yoke's travel</h3>
+       <svg id="force" viewBox="0 0 640 300" aria-label="Force against yoke position"></svg>
+       <div class="legend"><span><i style="background:var(--weight)"></i>Weight</span><span><i style="background:var(--blue)"></i>Air</span><span><i style="background:var(--amber)"></i>Model</span><span><i class="dash" style="color:var(--text)"></i>Drive</span><span id="lgfly" class="hide"><i class="dash" style="color:var(--muted)"></i>Flying now</span></div>
+       <div class="cap">Above the line the yoke is pushed forward; below, back. The model rests where its line crosses zero.</div></div>
+      <div class="blk"><h3>Where it rests, by air over the tail</h3>
+       <svg id="restv" viewBox="0 0 640 240" aria-label="Resting point against airflow over the tail"></svg>
+       <div class="cap" id="restcap"></div></div>
+      <div class="blk"><h3>The drive</h3><div class="rows">
+       <div class="row wrap"><span class="rl"><span>Drive's limit</span></span><span id="pceil">—</span><span class="cap">No firmest setting: the drive goes as firm as the model asks, up to the most it can hold without reaching its protection limit anywhere in the travel, counting the constant force (decision 16). Past it the yoke is lighter than the model, never misplaced. Above 100% is new: first felt in the owner's next session.</span></div>
+       <div class="row wrap"><span class="rl"><span>Units per lb</span><span class="cd hide" data-k="units_per_lb"></span></span><div class="stp" data-f="units_per_lb"></div><span class="cap">The calibration: how hard, never where it rests. 222 comes from CLS2Sim's display unit and has not been measured.</span></div>
+       <div class="row wrap"><span class="rl"><span>Drag</span><span class="cd hide" data-k="drag_divisor"></span></span><div class="stp" data-f="drag_divisor"></div><span class="cap">Force-following gain. 1/6 is the drive's own; more is untested.</span></div>
+       <div class="row wrap"><span class="rl"><span>Move back</span><span class="cd hide" data-k="move_back"></span></span><div class="stp" data-f="move_back"></div><span class="cap" id="dragcap">180 is the drive's own; higher is untested. Drag and move back apply at the next force-feel start.</span></div>
+      </div></div>
+      <div class="blk" id="fblk"><h3>Elevator figures</h3><p class="cap" id="profline"></p><div class="rows" id="frows"></div><p class="cap" id="froline"></p></div>
+     </div>
+    </div>
+   </div>
+   <div class="col" id="c-roll">
+    <div class="ch"><h2>Roll</h2><span class="nowf"></span></div>
+    <div class="cap sub"></div>
+    <div id="rstage" class="hide">
+     <div class="figs">
+      <svg id="rwings" viewBox="0 0 800 300" aria-label="Left and right aileron sections, each seen from its own wingtip"></svg>
+      <svg id="rwheel" viewBox="0 0 800 270" aria-label="Control wheel, from the pilot's seat"></svg>
+     </div>
+     <div class="legend"><span><i style="background:var(--weight)"></i>Weight</span><span><i style="background:var(--blue)"></i>Air on the deflection</span><span><i style="background:var(--green)"></i>Float with angle of attack</span><span><i style="background:var(--amber)"></i>Net turn</span><span><i style="background:var(--red)"></i>Stalled</span><span><i style="background:#e8ebee"></i>Rests here</span></div>
+    </div>
+    <div class="rows" id="rmodel"></div>
+    <div class="rows">
+     <div class="row wrap"><span class="rl"><span>Drive's limit</span></span><span id="rceil">—</span><span class="cap">No firmest setting: the drive goes as firm as the aileron model asks, up to the most it can hold without reaching its protection limit anywhere in the travel (decision 16). Past it the wheel is lighter than the model, never misplaced. Below 20% the drive's spring is placed so the wheel feels the model's torque where it is: with no air it stays where it is left.</span></div>
+     <div class="row wrap"><span class="rl"><span>Units per N·m</span><span class="cd hide" data-k="units_per_nm"></span></span><div class="stp" data-f="units_per_nm"></div><span class="cap">The calibration: how hard, never where it rests. 1000 comes from CLS2Sim's display unit and has not been measured.</span></div>
+    </div>
+    <div class="blk" id="bblk"><h3>Buffet</h3><p class="cap"><b>Untested with the motors on.</b> The drive's own shake at the stall, from X-Plane's stalled panels at the wing roots (pitch: the wing's wake on the tail) and the ailerons (roll). Off by default: turn it on only for the motors-on test, with Stop yoke motors one click away.</p><div class="rows">
+     <div class="row wrap"><span class="rl"><span>Buffet</span></span><label><input type="checkbox" id="bon"> On</label></div>
+     <div class="row wrap"><span class="rl"><span>Strength</span></span><input type="number" id="bpct" min="0" max="100" step="5" style="width:5em"><span class="cap">Percent of the plugin's ceiling, 450 drive units (about 2 lb by the unmeasured 222 per lb). Start low.</span></div>
+     <div class="row wrap"><span class="rl"><span>Period</span></span><input type="number" id="bper" min="10" max="140" step="5" style="width:5em"><span class="cap">The drive's time value, 10 to 140 as CLS2Sim writes it. Its unit is inferred, not measured.</span></div>
+    </div><p class="cap" id="bnow"></p></div>
+   </div>
+  </section>
+  <footer id="foot"><span class="cap" id="ftext"></span><button id="dbtn">Details</button></footer>
+ </main>
+
+ <main id="notice" class="note hide"></main>
+
+ <main id="det" class="hide">
+  <div id="dhead"><button id="back"><span style="font-size:34px;line-height:1">‹</span><span>Back to feel</span></button><h1>Details</h1><span class="cap" id="listen"></span></div>
+  <div id="dgrid">
+   <section class="dp"><h2>Marks</h2><div id="mlist"></div><p class="cap" style="margin:8px 0 0">Mark also works from a yoke button.</p>
+    <h2 style="margin-top:14px">Recent changes</h2><div id="nlist"></div><p class="cap" style="margin:4px 0 0">Changes the flight didn't make: what made each.</p></section>
+   <section class="dp" id="dspring"><h2>Spring shape</h2>
+    <div class="lbl26">Pitch</div><div class="sc" id="sp-pitch"></div>
+    <div class="lbl26" style="margin-top:6px">Roll</div><div class="sc" id="sp-roll"></div>
+    <p class="cap" style="margin:6px 0 0">The shape is fixed. Firmness scales it.</p></section>
+   <section class="dp"><h2>What X-Plane reports</h2>
+    <table id="xp"><thead><tr><th></th><th>Tail</th><th>Ailerons</th></tr></thead><tbody id="xpb"></tbody></table></section>
+  </div>
+  <section class="dp" id="strip"><h2 style="position:absolute">Last 2 minutes</h2><div class="sc" id="hist"></div></section>
+ </main>
+</div>
+<div id="nbar" class="hide" role="status" aria-live="polite"></div>
+<div id="toast" class="hide">Saved. Every flight starts with these now.</div>
+<div id="etoast" class="hide"></div>
+
+<!-- The elevator model, the same block as elevator.html's; elevator_vectors.mjs fails if they differ. -->
+<script id="model">
+// The chain that gives the tail its angle and stall on the page (decision 17):
+// airspeed, load factor and power -> the wing's angle and its stalled share ->
+// the downwash behind it -> the tail's angle, with the pitch rate's share. In
+// the aircraft X-Plane computes all of this and the plugin reads the tail
+// panels' angle and stall flags (TailAir.panels); the page computes it so the
+// yoke can be tried in a stall without the sim. Quasi-static: each moment is a
+// steady state, no lag between the wing's angle and the downwash at the tail.
+// A Cessna 172S at 2550 lb, flaps up, sea level. Every figure's source and how
+// sure it is are in the page's notes.
+const Flight=(()=>{
+  const DEG=Math.PI/180,KT=0.514444,RHO=1.225,G=9.80665;
+  const P={weight:11343,area:16.17,span:11.0,a2d:6.0,e:0.8,alpha0:-2.1*DEG,stallKt:53,
+    width:4*DEG,postLift:1.15,maxAlpha:24*DEG,downwash:1.085,incidence:-2.5*DEG,tailArm:4.5,
+    groundAttitude:1.5*DEG,power:134000,prop:0.75,staticThrust:2400};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  const AR=P.span*P.span/P.area;
+  const slope=P.a2d/(1+P.a2d/(Math.PI*P.e*AR));                 // the wing's lift slope, per radian
+  const clMax=P.weight/(.5*RHO*(P.stallKt*KT)**2*P.area);        // what the POH's flaps-up stall speed needs
+  const critical=P.alpha0+clMax/slope;                           // the wing's angle at its stall
+  const stalledShare=a=>clamp((a-critical)/P.width,0,1);
+  // Lift: the straight line up to the stall; past it the stalled share blends
+  // it into a flat plate's, so lift falls as the share grows.
+  const lift=a=>{const x=stalledShare(a);return (1-x)*slope*(a-P.alpha0)+x*P.postLift*Math.sin(2*a);};
+  const thrust=(throttle,v)=>throttle*Math.min(P.staticThrust,P.prop*P.power/Math.max(v,1));
+  // c: {kt, throttle, n (the load factor asked for), ground (on its wheels),
+  // pitchRate (deg/s beyond a steady pull's), tailwind (kt from behind, on the
+  // ground)}. Angles in radians.
+  const of=c=>{
+    const n=Number.isFinite(c.n)?c.n:1,v=Math.max(c.kt,0)*KT,throttle=c.throttle;
+    if (c.ground) {
+      // On its wheels the wing sits at its ground attitude; the downwash is
+      // that angle's. The wind from behind meets the prop's wash head on: their
+      // pressures subtract, and past it the air over the tail comes from behind.
+      const aw=P.groundAttitude,cl=slope*(aw-P.alpha0),eps=P.downwash*2*cl/(Math.PI*AR);
+      const tw=Number.isFinite(c.tailwind)?Math.max(c.tailwind,0):0,u=c.kt-tw;
+      let q=Elevator.tailQ(Math.max(u,0),throttle),reversed=false;
+      if (u<0) {const net=Elevator.tailQ(0,throttle)-.5*RHO*(u*KT)**2;reversed=net<0;q=Math.abs(net);}
+      const theta=aw+P.incidence;                                // the tail's chord against the ground
+      const tail=reversed?theta:theta-eps;                       // with air from behind, no downwash reaches it
+      // X-Plane's angle for air from behind is the angle plus 180°, kept within ±180°.
+      const reported=reversed?(theta>=0?theta-Math.PI:theta+Math.PI):tail;
+      return {ground:true,q,reversed,alphaW:aw,wingStalled:0,cl,n:1,asked:1,epsilon:reversed?0:eps,pitchRate:0,
+        pitchShare:0,alphaT:tail,reported,thrust:thrust(throttle,0),critical,clMax};
+    }
+    const V=Math.max(v,1),qw=.5*RHO*V*V,T=thrust(throttle,V);
+    // The angle the pull asks for: the lift for n times the weight, less the
+    // thrust's lift share, on the straight line. Past the stall it is the angle
+    // the held pull reaches when the lift no longer follows, up to maxAlpha:
+    // the chain has no pitching moment, so where a full-up elevator holds a
+    // stalled wing is a guess.
+    let aw=P.alpha0+n*P.weight/(qw*P.area)/slope;
+    for (let i=0;i<20;i++) aw=clamp(P.alpha0+(n*P.weight-T*Math.sin(clamp(aw,-P.maxAlpha,P.maxAlpha)))/(qw*P.area)/slope,-P.maxAlpha,P.maxAlpha);
+    const wingStalled=stalledShare(aw),cl=lift(aw);
+    const reached=wingStalled>0||aw>=P.maxAlpha?(cl*qw*P.area+T*Math.sin(aw))/P.weight:n;
+    const eps=P.downwash*2*cl/(Math.PI*AR);
+    const pitchRate=G*(reached-1)/V+(Number.isFinite(c.pitchRate)?c.pitchRate:0)*DEG;
+    const pitchShare=pitchRate*P.tailArm/V;
+    const tail=aw+P.incidence-eps+pitchShare;
+    return {ground:false,q:Elevator.tailQ(c.kt,throttle),reversed:false,alphaW:aw,wingStalled,cl,n:reached,asked:n,
+      epsilon:eps,pitchRate,pitchShare,alphaT:tail,reported:tail,thrust:T,critical,clMax};
+  };
+  return {P,AR,slope,clMax,critical,stalledShare,lift,thrust,of};
+})();
+// The tail's angle of attack and stall, as the elevator's hinge moment takes
+// them (decision 17; docs/brunner/aileron-and-aoa-plan.md, section 3), the
+// ailerons' rules: X-Plane's tail panels (the profile's tail_sections, 8 and
+// 9) give the angle and the stalled share, each weighted by the panel's own
+// q*area; a panel under 2.5 Pa says nothing and the angle is clamped to ±30°.
+// The float slope cha (Ch_alpha) and the share a stalled tail keeps (keep, the
+// profile's stall_factor) are the profile's figures; the page carries them in
+// s so it can turn them, and a missing one is P's.
+// alpha is the tail's angle as X-Plane reports it, radians, positive with the
+// air coming from below. It is taken to exclude the elevator's own deflection
+// (step 0 of the plan has not measured it); if it includes it, the plugin
+// subtracts that share of elevator1_deg before it reaches the model.
+// s.surface, the page's: the tail stalls on its own angle plus the elevator's
+// share, alpha + tau*d, past a thin symmetric section's stall angle, its
+// stalled share ramping to 1 over width. In the aircraft X-Plane's tail flags
+// are s.stalled instead, if step 0 shows they follow the deflection.
+const TailAir=(()=>{
+  const DEG=Math.PI/180;
+  const P={cha:0.20,keep:0.4,minPa:2.5,alphaClamp:30*DEG,tau:0.5,stall:13*DEG,width:4*DEG,kRev:1.0};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  // From the tail's panels, as flight.hpp's aileron_side reads a wing: each
+  // {speed m/s, area m², alphaDeg, stalled (a flag, stalled at 0.5 or more)}.
+  // q is area-weighted over all of them; the angle (degrees) and the stalled
+  // share are weighted by q*area over the panels with minPa or more. Null when
+  // X-Plane does not supply a value or the density is not positive. Angles
+  // wrap at ±180°: while every counted panel lies within ±90° the angle is the
+  // plain weighted mean; otherwise each is unwrapped about the weighted
+  // circular mean before the mean is taken, and the result wrapped to
+  // (-180°, 180°], so panels astride ±180° read as air from behind, not as 0°.
+  const wrapped=deg=>deg-360*Math.ceil((deg-180)/360);
+  const panels=(rho,list)=>{
+    if (!(Number.isFinite(rho)&&rho>0)) return null;
+    let area=0,pressureArea=0,weight=0,angle=0,stalled=0,sines=0,cosines=0,ahead=true;
+    for (const p of list) {
+      if (!(Number.isFinite(p.speed)&&p.speed>=0&&Number.isFinite(p.area)&&p.area>0)) return null;
+      const q=.5*rho*p.speed*p.speed;
+      area+=p.area;pressureArea+=p.area*q;
+      if (q<P.minPa) continue;
+      if (!Number.isFinite(p.alphaDeg)||!Number.isFinite(p.stalled)) return null;
+      weight+=q*p.area;angle+=q*p.area*p.alphaDeg;stalled+=p.stalled>=.5?q*p.area:0;
+      sines+=q*p.area*Math.sin(p.alphaDeg*DEG);cosines+=q*p.area*Math.cos(p.alphaDeg*DEG);
+      ahead=ahead&&Math.abs(p.alphaDeg)<90;
+    }
+    if (!(area>0)) return null;
+    if (!ahead&&weight>0) {
+      const centre=Math.atan2(sines,cosines)/DEG;angle=0;
+      for (const p of list) {const q=.5*rho*p.speed*p.speed;if (q>=P.minPa) angle+=q*p.area*(centre+wrapped(p.alphaDeg-centre));}
+      angle=wrapped(angle/weight)*weight;
+    }
+    return {q:pressureArea/area,alphaDeg:weight>0?angle/weight:0,stalled:weight>0?stalled/weight:0};
+  };
+  // What the hinge moment uses at elevator angle d: the gated, clamped angle;
+  // the stalled share; eff, the share of the air's moments kept,
+  // 1 - (1 - keep)*stalled. Under minPa over the tail, angle and stall say
+  // nothing. Only they are gated, not the air's stiffness, unlike the
+  // ailerons' whole-moment gate: the elevator's stiffness came first and stays
+  // exactly as it was. reversed: the air comes from behind (beyond ±90°, a
+  // tailwind on the ground). Modelled (decision 17, the owner, 2026-11-09):
+  // the deflection's moment turns over, kRev of it, so the elevator runs to a
+  // stop; the angle is taken against the reversed stream, so a tail whose
+  // chord is level reads 0 either way. It turns over smoothly, never across a
+  // hair's width: turn, the deflection's share of its moment, is whole within
+  // the angle clamp and past it cos(raw)/cos(clamp), held to ±1, its reversed
+  // half times kRev: 0 with the air across the tail (±90°), -kRev from ±150°.
+  // ahead, the same without its reversed half, fades the elevator's own stall,
+  // a stall of air from ahead. reversed reports the air mostly from behind;
+  // nothing in the moments steps on it. beyond: past the clamp, where the
+  // rest is scanned. Over the gate turn's departure from 1 fades in with q,
+  // none at minPa to all at twice it, so air from behind does not step in.
+  const turnOf=(raw,kRev,q)=>{if (Math.abs(raw)<=P.alphaClamp) return {turn:1,ahead:1};
+    const c=clamp(Math.cos(raw)/Math.cos(P.alphaClamp),-1,1),turn=c>=0?c:kRev*c,share=clamp((q-P.minPa)/P.minPa,0,1);
+    return {turn:share>=1?turn:1+(turn-1)*share,ahead:Math.max(0,c)};};
+  const of=(s,d=0)=>{
+    const on=s.q>=P.minPa,raw=Number.isFinite(s.alpha)?s.alpha:0,reversed=on&&Math.abs(raw)>Math.PI/2;
+    const kRev=Number.isFinite(s.kRev)?s.kRev:P.kRev,{turn,ahead}=on?turnOf(raw,kRev,s.q):{turn:1,ahead:1};
+    const rel=reversed?(raw>0?Math.PI-raw:-Math.PI-raw):raw;
+    const alpha=on?clamp(rel,-P.alphaClamp,P.alphaClamp):0;
+    const given=on&&Number.isFinite(s.stalled)?clamp(s.stalled,0,1):0,f=s.surface;
+    const effective=f&&on&&ahead>0?rel+f.tau*d:0;
+    const surface=f&&on&&ahead>0?ahead*clamp((Math.abs(effective)-f.stall)/f.width,0,1):0;
+    const stalled=surface>given?surface:given;
+    const keep=Number.isFinite(s.keep)?clamp(s.keep,0,1):P.keep,cha=Number.isFinite(s.cha)?s.cha:P.cha;
+    return {alpha,stalled,keep,cha,eff:1-(1-keep)*stalled,reversed,kRev,effective,surface,turn,ahead,beyond:on&&Math.abs(raw)>P.alphaClamp};
+  };
+  return {P,DEG,panels,of};
+})();
+// The elevator about its hinge. Positive deflection is trailing edge down,
+// which is the yoke forward. Kept free of the page so the feel page can reuse it.
+// The tail's angle adds the float, -q*area*chord*cha*alpha: with cha positive
+// (the elevator floats with the flow) a positive tail angle floats the
+// trailing edge up, so the yoke's rest moves aft; a negative one, forward. A
+// stalled share scales the air's moments, deflection, trim and float alike,
+// to eff of themselves; the weight is the weight. With air from behind the
+// deflection's moment turns over (kRev of it, smoothly, TailAir's turn): the
+// elevator diverges to a stop.
+// With no angle, nothing stalled and no s.surface the model is exactly the
+// one before them.
+const Elevator=(()=>{
+  const INLB=0.112985,KT=0.514444,RHO=1.225,DEG=Math.PI/180;
+  const P={area:1.350,chord:0.427,slope:0.45,up:28*DEG,down:23*DEG,gearing:0.137,inertia:0.40,
+    wash:30,tabRatio:0.6,tabUp:22*DEG,tabDown:19*DEG,zeta:0.4};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  // Air pressure over the tail, Pa: airspeed plus prop wash (rough slipstream, 30 m/s at full power parked).
+  const tailQ=(kt,throttle)=>{const v=kt*KT,w=P.wash*throttle*Math.max(0,1-v/80);return .5*RHO*(v*v+w*w);};
+  const stiffness=q=>q*P.area*P.chord*P.slope; // N·m per radian away from where the air holds it
+  // Trim wheel -1 (nose down) .. +1 (nose up): the tab moves the elevator's float angle.
+  const tabAngle=t=>t>=0?t*P.tabDown:t*P.tabUp;      // the tab against the elevator, trailing edge down positive
+  const trimFloat=t=>-P.tabRatio*tabAngle(t);
+  // The float's moment, N·m, trailing edge down positive: constant across the travel.
+  const floatMoment=(s,a)=>-s.q*P.area*P.chord*a.cha*a.eff*a.alpha;
+  const moments=(s,d)=>{
+    const a=TailAir.of(s,d);
+    const weight=s.unbalance*INLB*s.g*Math.cos(d),float_=floatMoment(s,a);
+    const air=-stiffness(s.q)*a.turn*a.eff*(d-s.trim);
+    return {weight,air,float:float_,net:weight+air+float_};
+  };
+  const lb=h=>h/INLB*P.gearing;            // N·m at the hinge -> lb at the yoke
+  const inches=d=>d/P.gearing;             // elevator angle -> yoke inches, forward positive
+  // With air from behind, or a stall that changes along the travel: from
+  // where the elevator is (from, rad; trim when not given), follow the net
+  // moment in quarter degrees to where it turns over (then bisect) or to a
+  // stop: the balance a free elevator reaches from there. Where the stall
+  // makes two balances, the elevator keeps to the one on its side of the
+  // unstable point between them, so the rest holds still as the air changes
+  // until that balance goes. With air from behind the balance is unstable,
+  // so it runs to the stop it is pushed toward.
+  const scan=(s,from)=>{
+    const net=d=>moments(s,d).net,sign=v=>v>0?1:v<0?-1:0,step=0.25*DEG;
+    let d=clamp(Number.isFinite(from)?from:s.trim,-P.up,P.down);const way=sign(net(d));
+    if (way===0) return d;
+    for (;;) {
+      const e=clamp(d+way*step,-P.up,P.down);
+      if (e===d) return d;
+      if (sign(net(e))!==way) {
+        let lo=d,hi=e;for (let i=0;i<60;i++) {const m=(lo+hi)/2;if (sign(net(m))===way) lo=m;else hi=m;}
+        return (lo+hi)/2;
+      }
+      d=e;
+    }
+  };
+  const rest=(s,from)=>{                   // where weight, air and float balance, friction aside, reached from `from`
+    if (s.surface||TailAir.of(s).beyond) return scan(s,from);
+    const a=TailAir.of(s),K=stiffness(s.q)*a.eff,W=s.unbalance*INLB*s.g,F=-floatMoment(s,a);
+    if (K<1e-9) {                         // no centring: weight and float alone, the side they push from neutral
+      const n=W-F;
+      if (n>0) return W*Math.cos(P.down)-F>=0?P.down:Math.acos(F/W);
+      if (n<0) return W*Math.cos(P.up)-F<=0?-P.up:-Math.acos(F/W);
+      return clamp(s.trim,-P.up,P.down);
+    }
+    let d=clamp(s.trim+(W-F)/K,-P.up,P.down);
+    for (let i=0;i<30;i++) {const f=W*Math.cos(d)-K*(d-s.trim)-F,df=-W*Math.sin(d)-K;d=clamp(d-f/df,-P.up,P.down);}
+    return d;
+  };
+  // One step of the free elevator: inertia, air damping, control-system friction, stops.
+  const step=(st,s,dt)=>{
+    const m=moments(s,st.d),K=stiffness(s.q)*TailAir.of(s,st.d).eff;
+    const damping=2*P.zeta*Math.sqrt(P.inertia*K)+0.02;
+    const friction=s.friction/P.gearing*INLB; // lb at the yoke -> N·m at the hinge
+    let torque=m.net-damping*st.w;
+    if (Math.abs(st.w)<1e-4) {
+      if (Math.abs(m.net)<=friction) {st.w=0;return;}
+      torque-=Math.sign(m.net)*friction;
+    } else torque-=Math.sign(st.w)*friction;
+    const w0=st.w;st.w+=torque/P.inertia*dt;
+    if (w0!==0 && Math.sign(st.w)!==Math.sign(w0) && Math.abs(m.net)<=friction) st.w=0; // friction stops it, never reverses it
+    st.d+=st.w*dt;
+    if (st.d>P.down) {st.d=P.down;if (st.w>0) st.w=0;}
+    if (st.d<-P.up) {st.d=-P.up;if (st.w<0) st.w=0;}
+  };
+  // Elevator angle -> the yoke drive's signed counts, 12000 at either stop, forward positive.
+  const counts=d=>Math.round(clamp(d>=0?d/P.down:d/P.up,-1,1)*12000);
+  // The model in the yoke's terms (elevator.hpp's solve_pitch reports the same;
+  // elevator_vectors.json holds the two together).
+  // The stiffness is the stalled share's at the rest (eff) and the air's
+  // direction's (turn): through 0 with the air across the tail, negative with
+  // it from behind; the float, constant across the travel, is floatLb.
+  const drive=(s,from)=>{const r=rest(s,from),a=TailAir.of(s,r),k=stiffness(s.q)*a.turn*a.eff;
+    return {weightLb:lb(s.unbalance*INLB*s.g),centreCounts:counts(clamp(s.trim,-P.up,P.down)),
+    stiffnessLbPerIn:k/INLB*P.gearing*P.gearing,restCounts:counts(r),floatLb:lb(floatMoment(s,a))};};
+  // What the drive is told for the yoke at x0 counts: elevator.hpp's
+  // solve_pitch, step for step. Its line is F(x) = b - ks*(x - c) in drive
+  // units, ks = strength*1000/12000/100 per count. c sits on the model's rest
+  // reached from x0 (from trim when x0 is not given),
+  // b is the model's force there (zero inside the travel, the weight's push
+  // at a stop), and the strength is the secant from there to x0, at least 60
+  // counts long, held to 20..the drive's ceiling (20%: the softest the drive
+  // accepts). The ceiling (decision 16, tuning.hpp's drive_ceiling): the
+  // strongest whole percent, 400 down to 21, whose line, constant force
+  // included, stays within 4000 units over the travel, else 20; the line is
+  // worst at the stop farther from its zero, k = strength*10/travel per count.
+  const TRAVEL=12000,UNIT=1000/12000/100,SECANT=60,MAX_BIAS=2250,SOFTEST=20;
+  const MARGIN=4000,UNITS_PER_PERCENT=10,STRONGEST=MARGIN/UNITS_PER_PERCENT;
+  // Pitch's constant-force cut-off (0x211f, tuning.hpp's bias_offset_off): a
+  // strength sent with a constant force stays below it.
+  const BIAS_OFFSET_OFF=101,STRONGEST_WITH_BIAS=BIAS_OFFSET_OFF-1;
+  const lround=v=>Math.sign(v)*Math.round(Math.abs(v)); // C's lround: halves away from zero
+  const worstForce=(strength,centre,held,travel)=>{
+    const k=strength*UNITS_PER_PERCENT/travel;
+    return Math.max(Math.abs(held-k*(travel-centre)),Math.abs(held-k*(-travel-centre)));
+  };
+  const driveCeiling=(travel,line)=>{
+    for (let s=STRONGEST;s>SOFTEST;s--) {const [centre,held]=line(s);if (worstForce(s,centre,held,travel)<=MARGIN) return s;}
+    return SOFTEST;
+  };
+  const angle=c=>{const x=clamp(c,-TRAVEL,TRAVEL)/TRAVEL;return x>=0?x*P.down:x*P.up;};
+  const exact=d=>clamp(d>=0?d/P.down:d/P.up,-1,1)*TRAVEL; // counts, unrounded
+  const grip=(s,d)=>lb(moments(s,d).net);
+  const solve=(s,x0,unitsPerLb)=>{
+    const u=clamp(unitsPerLb,1,100000);
+    const r=rest(s,Number.isFinite(x0)?angle(x0):NaN),restCounts=exact(r),atStop=Math.abs(restCounts)>=TRAVEL-0.5;
+    const anchorLb=atStop?grip(s,r):0;
+    const x=Number.isFinite(x0)?clamp(x0,-TRAVEL,TRAVEL):restCounts;
+    let dx=x-restCounts;
+    if (Math.abs(dx)<SECANT) {
+      const side=dx>0?1:dx<0?-1:(restCounts>0?-1:1);
+      dx=side*SECANT;
+      if (Math.abs(restCounts+dx)>TRAVEL) dx=-dx;
+    }
+    const slope=(anchorLb-grip(s,angle(restCounts+dx)))/dx;
+    const want=slope*u/UNIT;
+    const centre=lround(restCounts);
+    const heldAt=strength=>lround(clamp(anchorLb*u+strength*UNIT*(restCounts-centre),-MAX_BIAS,MAX_BIAS));
+    let ceiling=driveCeiling(TRAVEL,strength=>[centre,heldAt(strength)]);
+    while (ceiling>STRONGEST_WITH_BIAS && heldAt(ceiling)!==0) ceiling--;
+    const strength=clamp(lround(clamp(want,SOFTEST,ceiling)),SOFTEST,ceiling);
+    const ks=strength*UNIT;
+    const b=anchorLb*u+ks*(restCounts-centre);
+    const held=heldAt(strength);
+    return {x,forceLb:grip(s,angle(x)),restCounts,slopeLbPerCount:slope,ceiling,strength,centre,bias:-held||0,
+      driveForceLb:(held-ks*(x-centre))/u,saturated:want>ceiling+1e-9,floored:want<SOFTEST-0.5,biasLimited:Math.abs(b)>MAX_BIAS+0.5};
+  };
+  return {P,INLB,DEG,tailQ,stiffness,tabAngle,trimFloat,moments,lb,inches,rest,step,clamp,counts,drive,solve};
+})();
+</script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const NS="http://www.w3.org/2000/svg";
+const AX=["pitch","roll"];
+const LIM={units_per_lb:[50,1000],units_per_nm:[100,10000],drag_divisor:[1,6],move_back:[180,720]};
+const TOP=100,TESTED=40; // firmness axis; above TESTED is untested
+let S=null;            // last state from the plugin
+let fails=0,connected=false,lastCraft="";
+let posting=0,epoch=0;  // POSTs in flight; bumped on every POST start and end
+let local=null;         // optimistic copy of trying
+let drag=null;          // {ax,f,v}
+let page="feel";        // feel | details
+let marks=[],marksCount=-1,hist=null,noteBusy=false;
+
+// ---------- network ----------
+async function getJSON(path,ms){
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),ms||1500);
+  try{const r=await fetch(path,{cache:"no-store",signal:c.signal});if(!r.ok)throw r.status;return await r.json();}
+  finally{clearTimeout(t);}
+}
+const FAILED="That didn't go through. Try again.";
+let errTimer=0;
+function showError(text){
+  const t=$("etoast");t.textContent=text||FAILED;t.classList.remove("hide");$("toast").classList.add("hide");
+  clearTimeout(errTimer);errTimer=setTimeout(()=>{t.classList.add("hide");if(S)render();},4000);
+}
+async function post(path,body){
+  posting++;epoch++;
+  const c=new AbortController(),tmr=setTimeout(()=>c.abort(),4000);
+  try{
+    const r=await fetch(path,{method:"POST",cache:"no-store",signal:c.signal,headers:{"Content-Type":"application/json","X-Workbench":"1"},body:JSON.stringify(body||{})});
+    if(r.ok){const s=await r.json();clearTimeout(tmr);posting--;epoch++;if(posting===0){local=null;apply(s);}return s;}
+    let msg="";try{const j=await r.json();if(j&&typeof j.error==="string")msg=j.error;}catch(e){}
+    showError(msg);
+  }catch(e){showError();}
+  clearTimeout(tmr);
+  posting--;epoch++;
+  if(posting===0){local=null;render();}
+  return null;
+}
+let pollTimer=0;
+async function poll(){
+  clearTimeout(pollTimer);
+  if(document.hidden)return;
+  const e0=epoch;
+  try{
+    const s=await getJSON("/api/state");
+    fails=0;
+    if(posting===0&&epoch===e0)apply(s);
+  }catch(e){
+    if(++fails>=2&&connected){connected=false;render();}
+  }
+  pollTimer=setTimeout(poll,connected?200:1000);
+}
+function apply(s){
+  S=s;
+  const fresh=s.sim_age_ms==null||s.sim_age_ms<=2000;
+  connected=fresh;
+  if(s.aircraft&&s.aircraft.name)lastCraft=s.aircraft.name;
+  if(page==="details"&&s.marks!==marksCount)loadMarks();
+  render();
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){poll();if(page==="details")loadHist();}});
+
+// ---------- helpers ----------
+const clone=o=>JSON.parse(JSON.stringify(o));
+function trying(){return local||(S&&S.trying);}
+function val(ax,f){
+  if(drag&&drag.ax===ax&&drag.f===f)return drag.v;
+  const t=trying();return ax?t[ax][f]:t[f];
+}
+function setting(sv,ax){const a=sv[ax];return a;}
+function axisTry(ax){
+  const a=Object.assign({},trying()[ax]);
+  if(drag&&drag.ax===ax)a[drag.f]=drag.v;return a;
+}
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function txt(tag,attrs,s,parent){const e=el(tag,attrs,parent);e.textContent=s;return e;}
+function status(s){return String(s||"").split(" - ").join(" — ");}
+function editable(){return !!(connected&&S);} // an edit always returns to your changes
+
+const edited={};
+function send(ax,f,v){
+  if(ax)edited[ax]=Date.now();
+  const body={};if(ax){body[ax]={};body[ax][f]=v;}else body[f]=v;
+  if(!local)local=clone(S.trying);
+  if(ax)local[ax][f]=v;else local[f]=v;
+  render();
+  return post("/api/settings",body);
+}
+
+// ---------- steppers ----------
+const STEP={units_per_lb:1,units_per_nm:10,drag_divisor:1,move_back:10};
+const FAST={units_per_lb:10,units_per_nm:100,move_back:30}; // a held button speeds up
+function fmt(f,v){
+  if(f==="units_per_lb"||f==="units_per_nm")return String(v);
+  if(f==="move_back")return String(v);
+  if(f==="drag_divisor")return "1/"+v;
+  return v+"%";
+}
+function bounds(ax,f){
+  return LIM[f];
+}
+document.querySelectorAll(".stp").forEach(st=>{
+  const col=st.closest(".col"),f=st.dataset.f,ax=col?col.id.slice(2):null;
+  st.innerHTML='<button class="mi">−</button><span></span><button class="pl">+</button>';
+  st._ax=ax;
+  st.querySelectorAll("button").forEach(b=>{
+    const dir=b.className==="pl"?1:-1;let tmr=0,reps=0;
+    const step=()=>{
+      if(!editable())return stop();
+      const [lo,hi]=bounds(ax,f),by=reps++>8&&FAST[f]?FAST[f]:STEP[f],v=Math.max(lo,Math.min(hi,val(ax,f)+dir*by));
+      if(v===val(ax,f))return stop();
+      send(ax,f,v);
+    };
+    const stop=()=>{clearTimeout(tmr);clearInterval(tmr);tmr=0;};
+    b.addEventListener("pointerdown",e=>{e.preventDefault();reps=0;step();stop();tmr=setTimeout(()=>{tmr=setInterval(step,140);},450);});
+    ["pointerup","pointercancel","pointerleave"].forEach(n=>b.addEventListener(n,stop));
+    b.addEventListener("click",e=>{if(e.detail===0)step();});
+  });
+});
+
+// ---------- pitch: the elevator model, live ----------
+// The drawing is elevator.html's, driven by X-Plane's inputs and the yoke's
+// actual position instead of a simulated elevator. Positions are the API's:
+// percent of travel from the elevator's neutral, aft positive.
+const EM=Elevator,EP=EM.P,P0=Object.assign({},EM.P);
+const FIGP={area_m2:["area",1],chord_m:["chord",1],hinge_slope_per_rad:["slope",1],up_deg:["up",EM.DEG],down_deg:["down",EM.DEG],
+  gearing_rad_per_in:["gearing",1],tab_ratio:["tabRatio",1],tab_up_deg:["tabUp",EM.DEG],tab_down_deg:["tabDown",EM.DEG],
+  inertia_kgm2:["inertia",1],wash_mps:["wash",1],damping_ratio:["zeta",1]};
+// What each figure is called. Bounds and steps are the plugin's (state.figure_limits).
+const FIGN={unbalance_inlb:"Weight moment",hinge_slope_per_rad:"Air stiffness (hinge slope)",area_m2:"Elevator area",
+  chord_m:"Chord aft of the hinge",up_deg:"Travel up",down_deg:"Travel down",gearing_rad_per_in:"Yoke gearing",
+  tab_ratio:"Trim tab effect",tab_up_deg:"Trim tab up",tab_down_deg:"Trim tab down",
+  alpha_slope_per_rad:"Float with the tail's angle",stall_factor:"Air kept when stalled",tau:"Elevator effectiveness (tau)",
+  stall_deg:"Elevator stall angle",stall_width_deg:"Elevator stall spread",k_rev:"Air from behind"};
+const limits=()=>(S&&S.figure_limits)||{};
+const dpOf=step=>{const t=String(step);return t.includes(".")?t.split(".")[1].length:0;};
+const RO={inertia_kgm2:"inertia",wash_mps:"slipstream",damping_ratio:"damping"}; // the elevator page's own; the plugin doesn't use them
+let draft={};               // figure changes previewed here, not yet sent
+const clampv=(v,a,b)=>Math.min(b,Math.max(a,v));
+const NOTICE_MS=5000; // how long the newest notice shows over the page
+const figsApi=()=>!!(S&&S.figure_limits&&S.trying&&S.trying.pitch&&S.trying.pitch.figures);
+function profileFigs(){const o={};for(const f of (S&&S.profile&&S.profile.figures)||[])o[f.key]=f.value;return o;}
+function flownFigs(){const o={};for(const f of (S&&S.profile&&S.profile.figures)||[])o[f.key]=f.flown!=null?f.flown:f.value;return o;}
+function overrides(v){const t=v==="kept"?S.kept:v==="local"?trying():S[S.showing]||S.trying;return (t&&t.pitch&&t.pitch.figures)||{};}
+const flyingFigs=()=>flownFigs();
+const previewFigs=()=>Object.assign(profileFigs(),overrides("local"),draft);
+function useFigs(f){Object.assign(EP,P0);for(const k in FIGP)if(f[k]!=null)EP[FIGP[k][0]]=f[k]*FIGP[k][1];return f.unbalance_inlb!=null?f.unbalance_inlb:30;}
+const dOf=p=>p>=0?-p/100*EP.up:-p/100*EP.down;     // percent aft positive -> elevator, trailing edge down positive
+const pOf=d=>d>=0?-d/EP.down*100:-d/EP.up*100;
+const qOf=kt=>0.5*1.225*Math.pow(kt*0.514444,2);
+// Everything the drawing needs from one set of figures, computed while they are loaded into the model.
+function evalModel(f,inp,yoke){
+  const unb=useFigs(f);
+  const s={q:Math.max(0,inp.tail_pa||0),trim:EM.trimFloat(clampv(inp.trim||0,-1,1)),g:Number.isFinite(inp.g)?clampv(inp.g,-1,4):1,unbalance:unb,friction:0};
+  // The tail's angle and stall as the plugin takes them (elevator.hpp): X-Plane's
+  // angle and tail-plane flag, and the profile's figures with the plugin's
+  // defaults, so a profile without them is the model without an angle.
+  const num=(v,dflt)=>Number.isFinite(v)?v:dflt;
+  Object.assign(s,{alpha:num(inp.tail_alpha_deg,0)*EM.DEG,stalled:num(inp.tail_stalled_xp,0),
+    cha:num(f.alpha_slope_per_rad,0),keep:num(f.stall_factor,1),kRev:num(f.k_rev,0)});
+  if(f.stall_deg>0&&f.stall_width_deg>0)s.surface={tau:num(f.tau,0),stall:f.stall_deg*EM.DEG,width:f.stall_width_deg*EM.DEG};
+  const at=p=>{const m=EM.moments(s,dOf(p));return [EM.lb(m.weight),EM.lb(m.air),EM.lb(m.net)];};
+  const curve=[];for(let p=100;p>=-100;p-=2.5)curve.push([p].concat(at(p)));
+  // The rest a free elevator reaches from the yoke (elevator.hpp's
+  // solve_pitch, from the yoke's position); from trim with no yoke.
+  const from=yoke==null?NaN:dOf(clampv(yoke,-100,100));
+  const rest=pOf(EM.rest(s,from));
+  const byKt=[];let leaves=null;
+  for(let kt=0;kt<=140;kt+=2){const d=EM.rest(Object.assign({},s,{q:qOf(kt)}),from);byKt.push([kt,pOf(d)]);if(leaves===null&&d<EP.down-1e-4)leaves=kt;}
+  const y=yoke==null?rest:clampv(yoke,-100,100),d=dOf(y),m=EM.moments(s,d);
+  return {s,curve,rest,byKt,leaves,centre:pOf(clampv(s.trim,-EP.up,EP.down)),tab:EM.tabAngle(clampv(inp.trim||0,-1,1)),
+    d,m,a:TailAir.of(s,d),force:EM.lb(m.net),up:EP.up,down:EP.down,scale:1/EM.INLB};
+}
+// words
+const pct=v=>Math.abs(v)<0.05?"neutral":Math.abs(v).toFixed(Math.abs(v)<10?1:0)+"% "+(v>0?"aft":"forward");
+const lbs=v=>Math.abs(v)<0.05?"none":Math.abs(v).toFixed(1)+" lb "+(v>0?"forward":"back");
+const trimWords=t=>Math.abs(t)<0.005?"trim neutral":"trim "+Math.round(Math.abs(t)*100)+"% nose "+(t>0?"up":"down");
+
+// ---- tail drawing (elevator.html's) ----
+const TL=$("tail"),hinge={x:430,y:150},elen=230,tabLen=52;
+const streaks=el("g",{},TL),slines=[];for(let i=0;i<14;i++)slines.push(el("line",{stroke:"#3a4450","stroke-width":2,"stroke-linecap":"round"},streaks));
+const soffs=slines.map((_,i)=>({x:(i*137)%800,y:30+(i*53)%240}));
+el("path",{d:`M${hinge.x},${hinge.y-12} C${hinge.x+120},${hinge.y-26} ${hinge.x+260},${hinge.y-26} ${hinge.x+330},${hinge.y-4} Q${hinge.x+342},${hinge.y} ${hinge.x+330},${hinge.y+4} C${hinge.x+260},${hinge.y+18} ${hinge.x+120},${hinge.y+14} ${hinge.x},${hinge.y+12} Z`,fill:"#39424d",stroke:"#56606b"},TL);
+txt("text",{x:hinge.x+150,y:hinge.y+50,"text-anchor":"middle"},"Stabilizer",TL);
+txt("text",{x:790,y:28,"text-anchor":"end"},"nose this way →",TL);
+const stopsG=el("g",{},TL);
+const ghost=el("path",{d:`M0,-12 L${-elen},-2 L${-elen},2 L0,12 Z`,fill:"none",stroke:"#8b949e","stroke-width":2,"stroke-dasharray":"5 6"},TL);
+const elevG=el("g",{},TL);
+el("path",{d:`M0,-12 L${-elen+tabLen},-5 L${-elen+tabLen},5 L0,12 Z`,fill:"#5b6672",stroke:"#7a8591"},elevG);
+// red with the stalled share the hinge takes, as the roll drawing tints its ailerons
+const elevStall=el("path",{d:`M0,-12 L${-elen+tabLen},-5 L${-elen+tabLen},5 L0,12 Z`,fill:"var(--red)",opacity:0},elevG);
+const tabG=el("g",{},elevG);
+el("path",{d:`M0,-5 L${-tabLen+6},-1.5 Q${-tabLen},0 ${-tabLen+6},1.5 L0,5 Z`,fill:"var(--tab)"},tabG);
+el("circle",{cx:0,cy:0,r:3.5,fill:"#15181c",stroke:"var(--tab)","stroke-width":1.5},tabG);
+el("circle",{cx:hinge.x,cy:hinge.y,r:7,fill:"#15181c",stroke:"#c9d0d6","stroke-width":2},TL);
+const mkArrow=c=>{const g=el("g",{},TL);return {g,l:el("line",{stroke:c,"stroke-width":5,"stroke-linecap":"round"},g),h:el("path",{fill:c},g)};};
+function setArrow(a,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);a.g.style.display=L<6?"none":"";if(L<6)return;
+  const ux=dx/L,uy=dy/L,hx=x2-ux*16,hy=y2-uy*16;
+  a.l.setAttribute("x1",x1);a.l.setAttribute("y1",y1);a.l.setAttribute("x2",hx);a.l.setAttribute("y2",hy);
+  a.h.setAttribute("d",`M${x2},${y2} L${hx-uy*9},${hy+ux*9} L${hx+uy*9},${hy-ux*9} Z`);
+}
+const wArrow=mkArrow("var(--weight)"),aArrow=mkArrow("var(--blue)"),fArrow=mkArrow("var(--green)");
+const backL=txt("text",{x:790,y:290,"text-anchor":"end",style:"fill:var(--red)"},"air from behind →",TL);
+const netArc=el("path",{fill:"none",stroke:"var(--amber)","stroke-width":5,"stroke-linecap":"round"},TL),netHead=el("path",{fill:"var(--amber)"},TL);
+let stopsKey="";
+// T: the tail as the hinge takes it, {stalled, reversed} (the plugin's when flying, else the page's)
+function drawTail(M,flyM,T){
+  const key=M.up+","+M.down;
+  if(key!==stopsKey){stopsKey=key;stopsG.textContent="";
+    for(const [a,t,dy] of [[M.down,"down stop",22],[-M.up,"up stop",-8]]){
+      const x=hinge.x-Math.cos(a)*(elen+20),y=hinge.y+Math.sin(a)*(elen+20);
+      el("line",{x1:hinge.x,y1:hinge.y,x2:x,y2:y,stroke:"#3a424c","stroke-dasharray":"4 6"},stopsG);
+      txt("text",{x:x-4,y:y+dy},t,stopsG);}}
+  const deg=-M.d/EM.DEG;
+  elevG.setAttribute("transform",`translate(${hinge.x},${hinge.y}) rotate(${deg})`);
+  tabG.setAttribute("transform",`translate(${-elen+tabLen},0) rotate(${-M.tab/EM.DEG})`);
+  // where the model rests, as a dashed ghost
+  ghost.setAttribute("transform",`translate(${hinge.x},${hinge.y}) rotate(${-dOfFor(M,M.rest)/EM.DEG})`);
+  const scale=26/EM.INLB/10,cap=v=>Math.sign(v)*Math.min(130,Math.abs(v));
+  const cg=40,cx=hinge.x-Math.cos(M.d)*cg,cy=hinge.y+Math.sin(M.d)*cg;
+  setArrow(wArrow,cx,cy,cx,cy+cap(M.m.weight*scale));
+  const cp=elen*.45,ax=hinge.x-Math.cos(M.d)*cp,ay=hinge.y+Math.sin(M.d)*cp,nx=Math.sin(M.d),ny=Math.cos(M.d),aL=cap(M.m.air*scale);
+  setArrow(aArrow,ax,ay,ax+nx*aL,ay+ny*aL);
+  const fp=elen*.7,fx=hinge.x-Math.cos(M.d)*fp,fy=hinge.y+Math.sin(M.d)*fp,fL=cap((M.m.float||0)*scale);
+  setArrow(fArrow,fx,fy,fx+nx*fL,fy+ny*fL);
+  elevStall.setAttribute("opacity",(clampv(T.stalled||0,0,1)*.55).toFixed(2));
+  backL.style.display=T.reversed?"":"none";
+  const mag=Math.min(1.6,Math.abs(M.m.net)*scale/120),r=58;
+  if(Math.abs(M.m.net)<0.05||mag<.04){netArc.setAttribute("d","");netHead.setAttribute("d","");}
+  else{const a0=Math.PI*1.15,sg=M.m.net>0?-1:1,a1=a0+sg*mag*2.2,pp=a=>[hinge.x+r*Math.cos(a),hinge.y+r*Math.sin(a)];
+    const [x0,y0]=pp(a0),[x1,y1]=pp(a1);
+    netArc.setAttribute("d",`M${x0},${y0} A${r},${r} 0 ${mag*2.2>Math.PI?1:0} ${sg>0?1:0} ${x1},${y1}`);
+    const tx=-Math.sin(a1)*sg,ty=Math.cos(a1)*sg;
+    netHead.setAttribute("d",`M${x1+tx*14},${y1+ty*14} L${x1-ty*9},${y1+tx*9} L${x1+ty*9},${y1-tx*9} Z`);}
+}
+function dOfFor(M,p){return p>=0?-p/100*M.up:-p/100*M.down;}
+let streakV=0,streakT=0;
+function animStreaks(now){
+  const dt=Math.min(.05,(now-(streakT||now))/1000);streakT=now;
+  slines.forEach((l,i)=>{const o=soffs[i];o.x-=streakV*dt*18;if(o.x<-60)o.x+=860;
+    if(o.x>800)o.x-=860;
+    const L=Math.min(70,Math.abs(streakV)*2.2);l.setAttribute("x1",o.x);l.setAttribute("x2",o.x+L);l.setAttribute("y1",o.y);l.setAttribute("y2",o.y);
+    l.setAttribute("opacity",Math.min(1,Math.abs(streakV)/25));});
+  requestAnimationFrame(animStreaks);
+}
+requestAnimationFrame(animStreaks);
+
+// ---- yoke strip: aft stop on the left, the panel on the right ----
+const YK=$("yokes"),yx=p=>90+(100-clampv(p,-100,100))/200*560,YY=78;
+el("rect",{x:700,y:24,width:16,height:108,fill:"#39424d"},YK);
+txt("text",{x:722,y:22,"text-anchor":"start"},"panel",YK);
+el("line",{x1:yx(100),y1:YY,x2:yx(-100),y2:YY,stroke:"#2c333b","stroke-width":2},YK);
+for(const [p,t,an] of [[100,"aft stop","start"],[0,"neutral","middle"],[-100,"fwd stop","end"]]){
+  el("line",{x1:yx(p),y1:YY-14,x2:yx(p),y2:YY+14,stroke:"#56606b","stroke-width":2},YK);
+  txt("text",{x:yx(p),y:160,"text-anchor":an},t,YK);}
+const yShaft=el("line",{y1:YY,y2:YY,x2:700,stroke:"#7a8591","stroke-width":10},YK);
+const yFly=el("g",{},YK);el("path",{d:"M0,24 l-11,-18 h22 z",fill:"none",stroke:"#8b949e","stroke-width":2.5,"stroke-dasharray":"4 3"},yFly);
+const yRest=el("g",{},YK);el("path",{d:"M0,24 l-11,-18 h22 z",fill:"var(--amber)"},yRest);
+const yRestL=txt("text",{y:24,"text-anchor":"start",style:"fill:var(--amber)"},"rest",YK);
+const yDrv=el("g",{},YK);el("path",{d:"M0,134 l-11,18 h22 z",fill:"none",stroke:"#e8ebee","stroke-width":2.5},yDrv);
+const yWheel=el("g",{},YK);el("rect",{x:-9,y:30,width:18,height:96,rx:8,fill:"#c9d0d6"},yWheel);
+const yArrM={g:el("g",{},YK)};yArrM.l=el("line",{stroke:"var(--amber)","stroke-width":6,"stroke-linecap":"round"},yArrM.g);yArrM.h=el("path",{fill:"var(--amber)"},yArrM.g);
+const yArrD={g:el("g",{},YK)};yArrD.l=el("line",{stroke:"#e8ebee","stroke-width":3,"stroke-linecap":"round"},yArrD.g);yArrD.h=el("path",{fill:"#e8ebee"},yArrD.g);
+function hArrow(a,x,y,len,w){a.g.style.display=Math.abs(len)<5?"none":"";if(Math.abs(len)<5)return;
+  const x2=x+len,ux=Math.sign(len),hx=x2-ux*14;
+  a.l.setAttribute("x1",x);a.l.setAttribute("y1",y);a.l.setAttribute("x2",hx);a.l.setAttribute("y2",y);
+  a.h.setAttribute("d",`M${x2},${y} L${hx},${y-w} L${hx},${y+w} Z`);}
+// lb -> px on the strip: forward (positive) points right, toward the panel
+const lbPx=v=>Math.sign(v)*Math.min(150,Math.abs(v)*16);
+function drawYoke(yoke,modelRest,driveRest,flyRest,fModel,fDrive){
+  const has=yoke!=null,x=yx(has?yoke:modelRest);
+  yWheel.style.display=yShaft.style.display=has?"":"none";
+  yWheel.setAttribute("transform",`translate(${x},0)`);yShaft.setAttribute("x1",x);
+  yRest.setAttribute("transform",`translate(${yx(modelRest)},0)`);
+  const rx=yx(modelRest),left=rx>560;yRestL.setAttribute("x",left?rx-16:rx+16);yRestL.setAttribute("text-anchor",left?"end":"start");
+  yDrv.style.display=driveRest==null||Math.abs(driveRest-modelRest)<0.5?"none":"";
+  if(driveRest!=null)yDrv.setAttribute("transform",`translate(${yx(driveRest)},0)`);
+  yFly.style.display=flyRest==null||Math.abs(flyRest-modelRest)<0.5?"none":"";
+  if(flyRest!=null)yFly.setAttribute("transform",`translate(${yx(flyRest)},0)`);
+  hArrow(yArrM,x,YY-12,has&&fModel!=null?lbPx(fModel):0,10);
+  hArrow(yArrD,x,YY+14,has&&fDrive!=null?lbPx(fDrive):0,7);
+}
+
+// ---- force chart: yoke travel across, aft stop on the left ----
+const FC={svg:$("force"),w:640,h:300,pad:{l:62,r:12,t:12,b:38}};FC.g=el("g",{},FC.svg);
+const RC={svg:$("restv"),w:640,h:240,pad:{l:62,r:16,t:12,b:38}};RC.g=el("g",{},RC.svg);
+const pathOf=pts=>pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1)).join("");
+function drawForceChart(M,F,yoke,fModel,drv){
+  const {pad,w,h}=FC;FC.g.textContent="";
+  let top=6;for(const c of M.curve)top=Math.max(top,Math.abs(c[1]),Math.abs(c[2]),Math.abs(c[3]));
+  // zoomed to the forces near the yoke; the steep ends run off the plot
+  const near=Math.max(10,Math.abs(fModel||0)*2.5,Math.abs(M.curve[0][1])*2.5,drv&&drv.force_lb!=null?Math.abs(drv.force_lb)*2.5:0);
+  const span=Math.ceil(Math.min(top,near,60)/2)*2;
+  const X=p=>pad.l+(100-p)/200*(w-pad.l-pad.r),Yv=v=>pad.t+(span-clampv(v,-span*4,span*4))/(2*span)*(h-pad.t-pad.b);
+  const cl=el("clipPath",{id:"fclip"},FC.g);el("rect",{x:pad.l-10,y:pad.t-10,width:w-pad.l-pad.r+20,height:h-pad.t-pad.b+20},cl);
+  for(const v of [-span,-span/2,0,span/2,span]){
+    el("line",{x1:pad.l,x2:w-pad.r,y1:Yv(v),y2:Yv(v),stroke:v===0?"#56606b":"#2c333b"},FC.g);
+    txt("text",{x:pad.l-8,y:Yv(v)+6,"text-anchor":"end"},v===span?v+" lb":String(v),FC.g);}
+  for(const [p,t,a] of [[100,"aft stop","start"],[0,"neutral","middle"],[-100,"fwd stop","end"]]){
+    el("line",{x1:X(p),x2:X(p),y1:pad.t,y2:h-pad.b,stroke:"#2c333b"},FC.g);
+    txt("text",{x:X(p),y:h-10,"text-anchor":a},t,FC.g);}
+  const line=(data,k,c,wd,dash)=>el("path",{d:pathOf(data.map(d=>[X(d[0]),Yv(d[k])])),fill:"none",stroke:c,"stroke-width":wd,"stroke-dasharray":dash||"","clip-path":"url(#fclip)"},FC.g);
+  if(F)line(F.curve,3,"#8b949e",2.5,"6 6");
+  line(M.curve,1,"var(--weight)",2.5);line(M.curve,2,"var(--blue)",2.5);line(M.curve,3,"var(--amber)",4);
+  if(drv&&yoke!=null&&drv.force_lb!=null&&(drv.slope_lb_per_percent!=null||drv.forward_stop_lb!=null)){
+    const Fd=drv.forward_stop_lb!=null&&drv.aft_stop_lb!=null?p=>drv.forward_stop_lb+(drv.aft_stop_lb-drv.forward_stop_lb)*(p+100)/200
+      :p=>(drv.bias_lb||0)+drv.slope_lb_per_percent*(p-(drv.centre_percent!=null?drv.centre_percent:yoke));
+    el("line",{x1:X(100),y1:Yv(Fd(100)),x2:X(-100),y2:Yv(Fd(-100)),stroke:"#e8ebee","stroke-width":2.5,"stroke-dasharray":"8 6","clip-path":"url(#fclip)"},FC.g);
+    el("circle",{cx:X(yoke),cy:Yv(drv.force_lb),r:8,fill:"var(--panel)",stroke:"#e8ebee","stroke-width":3},FC.g);
+  }
+  el("circle",{cx:X(M.rest),cy:Yv(0),r:8,fill:"none",stroke:"var(--amber)","stroke-width":3},FC.g);
+  if(yoke!=null&&fModel!=null)el("circle",{cx:X(yoke),cy:Yv(fModel),r:9,fill:"#ffffff"},FC.g);
+}
+function drawRestChart(M,F,inp,yoke,modelRest){
+  const {pad,w,h}=RC;RC.g.textContent="";
+  const X=kt=>pad.l+clampv(kt,0,140)/140*(w-pad.l-pad.r),Yp=p=>pad.t+(clampv(p,-100,100)+100)/200*(h-pad.t-pad.b);
+  for(const [p,t] of [[-100,"fwd"],[0,"neutral"],[100,"aft"]]){
+    el("line",{x1:pad.l,x2:w-pad.r,y1:Yp(p),y2:Yp(p),stroke:p===0?"#56606b":"#2c333b"},RC.g);
+    txt("text",{x:pad.l-8,y:Yp(p)+6,"text-anchor":"end"},t,RC.g);}
+  for(const kt of [0,20,40,60,80,100,120,140])txt("text",{x:X(kt),y:h-10,"text-anchor":kt===140?"end":"middle"},kt+(kt===140?" kt":""),RC.g);
+  el("line",{x1:pad.l,x2:w-pad.r,y1:Yp(M.centre),y2:Yp(M.centre),stroke:"var(--blue)","stroke-dasharray":"2 6","stroke-width":2},RC.g);
+  if(F)el("path",{d:pathOf(F.byKt.map(([k,p])=>[X(k),Yp(p)])),fill:"none",stroke:"#8b949e","stroke-width":2.5,"stroke-dasharray":"6 6"},RC.g);
+  el("path",{d:pathOf(M.byKt.map(([k,p])=>[X(k),Yp(p)])),fill:"none",stroke:"var(--amber)","stroke-width":4},RC.g);
+  if(inp&&inp.tail_kt!=null){
+    el("line",{x1:X(inp.tail_kt),x2:X(inp.tail_kt),y1:pad.t,y2:h-pad.b,stroke:"var(--text)","stroke-dasharray":"4 6"},RC.g);
+    el("circle",{cx:X(inp.tail_kt),cy:Yp(modelRest),r:8,fill:"none",stroke:"var(--amber)","stroke-width":3},RC.g);
+    if(yoke!=null)el("circle",{cx:X(inp.tail_kt),cy:Yp(yoke),r:7,fill:"#ffffff"},RC.g);
+  }
+  $("restcap").textContent=(M.leaves===null?"With these figures the yoke stays on the forward stop up to 140 kt over the tail.":
+    M.leaves===0?"With these figures the yoke is off the forward stop even parked.":
+    `With these figures it leaves the forward stop at ${M.leaves} kt over the tail.`)+" Blue dashes: where trim alone would put it. White dot: the yoke now.";
+}
+
+// ---- the limit, in plain words ----
+function limitWords(p){
+  const d=p.drive,m=p.model;
+  if(!d||!m)return ["",false];
+  if(d.phase==="blending")return ["Blending to the new feel over half a second.",false];
+  if(d.bias_limited)return [`At its constant-force limit, so the yoke rests ${pct(d.rest_percent)} instead of ${pct(m.rest_percent)}.`,true];
+  if(d.saturated){const r=d.shrink_ratio==null?null:d.shrink_ratio*100;
+    return [`At the drive's limit (${d.strength_percent}%): the yoke is ${r==null?"less":r<1?"under 1%":Math.round(r)+"%"} as stiff as the model here, so it feels lighter. It still rests in the right place.`,true];}
+  if(d.floored){const off=Math.abs((m.force_lb||0)-(d.force_lb||0));
+    return [`At its softest (${d.strength_percent}%), firmer than the model away from the rest: ${off<0.05?"no difference here":"off by "+off.toFixed(1)+" lb here"}. It still rests in the right place.`,off>=0.05];}
+  return ["Matches the model here.",false];
+}
+
+// ---- figures: tags, sources, preview steppers ----
+const fmtFig=(k,v)=>{const c=limits()[k];return c?Number(v).toFixed(Math.min(3,dpOf(c.step))):String(Number(v));};
+function buildFigRows(){
+  const box=$("frows");box.textContent="";
+  const figs=(S.profile&&S.profile.figures)||[];
+  const ro=[];
+  for(const f of figs){
+    if(!limits()[f.key]){ro.push(f);continue;}
+    const r=document.createElement("div");r.className="row wrap frow";r.dataset.k=f.key;
+    r.innerHTML='<span class="rl"><span class="fn"></span><span class="tag"></span><span class="cd hide"></span></span><div class="stp fs"><button class="mi">−</button><span></span><button class="pl">+</button></div><span class="cap src"></span>';
+    r.querySelector(".fn").textContent=FIGN[f.key]||f.key;
+    for(const b of r.querySelectorAll(".fs button")){
+      const dir=b.className==="pl"?1:-1;let tmr=0;
+      const step=()=>{const c=limits()[f.key];if(!c)return stop();const cur=previewFigs()[f.key];
+        const v=Number(clampv(Math.round((cur+dir*c.step)/c.step)*c.step,c.min,c.max).toFixed(dpOf(c.step)+1));
+        if(v===cur)return stop();
+        const base=Object.assign(profileFigs(),overrides("local"))[f.key];
+        if(Math.abs(v-base)<c.step/2)delete draft[f.key];else draft[f.key]=v;
+        render();};
+      const stop=()=>{clearTimeout(tmr);clearInterval(tmr);tmr=0;};
+      b.addEventListener("pointerdown",e=>{e.preventDefault();step();stop();tmr=setTimeout(()=>{tmr=setInterval(step,140);},450);});
+      ["pointerup","pointercancel","pointerleave"].forEach(n=>b.addEventListener(n,stop));
+      b.addEventListener("click",e=>{if(e.detail===0)step();});
+    }
+    box.appendChild(r);
+  }
+  box._ro=ro;box._sig=sigOf(figs);
+}
+const sigOf=figs=>figs.map(f=>f.key+f.value+f.tag+f.source).join("|")+"#"+Object.keys(limits()).join(",");
+const TAGW={published:"Published",derived:"Derived",guessed:"Guessed"};
+function renderFigs(){
+  const box=$("frows"),figs=(S.profile&&S.profile.figures)||[];
+  if(box._sig!==sigOf(figs))buildFigRows();
+  const pv=previewFigs(),kept=Object.assign(profileFigs(),overrides("kept")),tryF=Object.assign(profileFigs(),overrides("local"));
+  const api=figsApi();
+  for(const r of box.children){
+    const k=r.dataset.k,f=figs.find(x=>x.key===k),c=limits()[k]||{min:-Infinity,max:Infinity};
+    const tg=r.querySelector(".tag");tg.textContent=TAGW[f.tag]||f.tag;tg.className="tag "+f.tag;
+    const v=pv[k],stp=r.querySelector(".fs");
+    stp.querySelector("span").textContent=fmtFig(k,v)+(f.unit?" "+f.unit:"");
+    stp.classList.toggle("drafted",k in draft);stp.style.borderColor=k in draft?"var(--amber)":"";
+    stp.querySelector(".mi").disabled=v<=c.min;stp.querySelector(".pl").disabled=v>=c.max;
+    r.querySelector(".cd").classList.toggle("hide",!(api&&Math.abs(tryF[k]-kept[k])>1e-9));
+    const src=r.querySelector(".src"),diff=Math.abs(v-f.value)>1e-9;
+    src.textContent=(diff?"Profile: "+fmtFig(k,f.value)+(f.unit?" "+f.unit:"")+". ":"")+(f.source||"");
+  }
+  const ro=box._ro||[];
+  $("froline").textContent=ro.length?"Only the elevator page uses "+ro.map(f=>RO[f.key]||f.key).map((n,i)=>n+" "+fmtFig(ro[i].key,ro[i].value)+(ro[i].unit?" "+ro[i].unit:"")).join(", ")+"; the yoke doesn't.":"";
+  const pr=S.profile||{},pl=$("profline");
+  let line=pr.matched===false?"The C172's figures: this aircraft has no profile of its own.":"Profile "+(pr.name||"")+".";
+  if(pr.error)line+=" The profile file was refused: "+pr.error;
+  pl.textContent=line;pl.classList.toggle("err",!!pr.error);
+  // the preview bar, kept in the pinned stage so it is in view while stepping
+  const n=Object.keys(draft).length;$("prev").classList.toggle("hide",!n);
+  if(n){$("ptx").innerHTML=esc(n===1?"Previewing 1 figure":"Previewing "+n+" figures")+(api?'<span class="lg">. The drawing shows them; the yoke doesn\'t have them yet.</span>':". Preview only: the plugin takes figures from ansible/brunner.yml.");
+    $("ptry").classList.toggle("hide",!api);$("ptry").disabled=!editable();}
+}
+tap0("ptry",()=>{
+  if(!figsApi()||!Object.keys(draft).length)return;
+  const prof=profileFigs(),send={};
+  for(const k in draft)send[k]=Math.abs(draft[k]-prof[k])<1e-9?null:draft[k];
+  const body={pitch:{figures:send}};
+  if(!local)local=clone(S.trying);const nf=Object.assign({},local.pitch.figures);
+  for(const k in send){if(send[k]===null)delete nf[k];else nf[k]=send[k];}local.pitch.figures=nf;
+  draft={};edited.pitch=Date.now();render();post("/api/settings",body);
+});
+tap0("pclear",()=>{draft={};render();});
+function tap0(id,fn){$(id).addEventListener("click",fn);}
+
+function renderPitch(){
+  const col=$("c-pitch"),p=S.pitch||{},inp=p.inputs,live=$("live");
+  const nowT=p.now_percent!=null?"Now "+p.now_percent+"% firm":"";
+  col.querySelector(".nowf").textContent=nowT;
+  $("pceil").textContent=p.drive&&p.drive.ceiling_percent!=null?"the drive's limit now "+p.drive.ceiling_percent+"%":"—";
+  const parts=[];
+  if(inp){parts.push(inp.tail_kt+" kt over the tail"+(inp.tail_source==="surface"?", including propwash":""));parts.push(trimWords(inp.trim));parts.push(Number(inp.g).toFixed(2)+" g");}
+  if(S.ias_kt!=null)parts.push(S.ias_kt+" kt IAS");
+  col.querySelector(".sub").textContent=parts.join(" · ");
+  renderFigs();
+  const yoke=p.yoke_percent,i0=inp||{tail_pa:0,trim:0,g:1};
+  const drafting=Object.keys(draft).length>0;
+  const F=drafting?evalModel(flyingFigs(),i0,yoke):null;
+  const M=evalModel(drafting?previewFigs():flyingFigs(),i0,yoke);
+  streakV=Math.sqrt(2*Math.max(0,i0.tail_pa||0)/1.225);
+  const m=p.model,d=p.drive;
+  // the plugin's numbers when it has them; the page's own model for a preview
+  const modelRest=drafting||!m?M.rest:m.rest_percent;
+  const fModel=yoke==null?null:drafting||!m?M.force:m.force_lb;
+  // the stall and air from behind: the plugin's when it has them, the page's model for a preview
+  const tl=!drafting&&m&&m.tail?m.tail:null;
+  const T=tl?{stalled:tl.hinge_stalled,xp:tl.tail_stalled_xp,own:tl.elevator_stalled,reversed:!!tl.reversed,alpha:tl.alpha_deg,float:tl.float_lb}
+    :{stalled:M.a.stalled,xp:M.s.q>=TailAir.P.minPa?clampv(i0.tail_stalled_xp||0,0,1):0,own:M.a.surface,reversed:M.a.reversed,alpha:M.a.alpha/EM.DEG,float:EM.lb(M.m.float||0)};
+  if(T.reversed)streakV=-streakV;
+  drawTail(M,F,T);
+  drawYoke(yoke,modelRest,d&&!drafting?d.rest_percent:null,drafting?(m?m.rest_percent:F.rest):null,fModel,d&&!drafting?d.force_lb:null);
+  drawForceChart(M,F,yoke,fModel,drafting?null:d);
+  drawRestChart(M,F,inp,yoke,modelRest);
+  $("lgfly").classList.toggle("hide",!drafting);
+  const rows=[];
+  if(!inp)rows.push(["Model","Waiting for a flight sample from X-Plane."]);
+  rows.push(["Yoke",(yoke==null?"position unknown":pct(yoke))+" · rests "+pct(modelRest)+(drafting&&m?" (flying: "+pct(m.rest_percent)+")":"")]);
+  if(yoke!=null&&fModel!=null)rows.push(["Force here","model "+lbs(fModel)+(d&&!drafting?" · drive "+lbs(d.force_lb):"")]);
+  if(inp&&inp.tail_alpha_deg!=null){
+    const share=v=>v>=0.995?"yes":v<0.005?"no":Math.round(v*100)+"%";
+    // X-Plane's own angle beside it only where the model's differs: against air from behind, or clamped
+    const xa=Number(inp.tail_alpha_deg),shown=Math.abs(xa-T.alpha)>=0.05?" (X-Plane "+xa.toFixed(1)+"°)":"";
+    rows.push(["Tail angle",Number(T.alpha).toFixed(1)+"°"+shown+(Math.abs(T.float)>=0.05?" · floats "+lbs(T.float):"")]);
+    // two stalls, kept apart: the tail-plane's is X-Plane's flag, the elevator's is the model's own angle
+    rows.push(["Tail-plane stalled",share(T.xp)+(T.xp>=0.005?", X-Plane's flag":"")]);
+    rows.push(["Elevator stalled",share(T.own)+(T.own>=0.005?", its own angle":"")]);
+    if(T.stalled>=0.005)rows.push(["Hinge","keeps "+Math.round((1-(1-M.s.keep)*T.stalled)*100)+"% of the air, by the larger stall",true]);
+    if(T.reversed)rows.push(["Air from behind","the elevator runs to a stop",true]);
+  }
+  if(!drafting){const [w,lim]=limitWords(p);if(w)rows.push(["Drive",w,lim]);}
+  else if(m)rows.push(["Try",Math.abs(M.rest-m.rest_percent)<0.5?"Doesn't move the yoke's rest.":"Moves the rest "+Math.abs(M.rest-m.rest_percent).toFixed(1)+"% "+(M.rest>m.rest_percent?"aft":"forward")+", at once."]);
+  let h="";for(const [k,v,lim] of rows)h+='<span class="k">'+esc(k)+'</span><span'+(lim?' class="lim"':'')+'>'+esc(v)+"</span>";
+  if(live._h!==h){live.innerHTML=h;live._h=h;}
+  $("dragcap").textContent="180 is the drive's own; higher is untested."+(p.drag_waiting?" Your drag settings apply at the next force-feel start.":" Drag and move back apply at the next force-feel start.");
+  $("dragcap").classList.toggle("amb",!!p.drag_waiting);
+}
+
+// ---------- render ----------
+// Buffet's knob (decision 19): its own request, not part of the kept feel.
+function renderBuffet(){
+  const b=S&&S.buffet;$("bblk").hidden=!b;if(!b)return;
+  if(document.activeElement!==$("bon"))$("bon").checked=!!b.on;
+  if(document.activeElement!==$("bpct"))$("bpct").value=b.percent;
+  if(document.activeElement!==$("bper"))$("bper").value=b.period;
+  const left=(b.time_unrestored||[]).map((v,i)=>v==null?"":(i?"pitch":"roll")+" (found "+v+")").filter(Boolean);
+  $("bnow").textContent=(b.on?"On. Shaking now: pitch "+b.pitch_units+", roll "+b.roll_units+" drive units."
+      :b.pitch_units||b.roll_units?"Off: clearing what buffet set.":"Off: buffet writes nothing; what it set is cleared.")
+    +(b.uncleared?" Buffet's last clear did not read back: switch the yoke off and on.":"")
+    +(left.length?" Vibration time not put back on "+left.join(" and ")+": outside what the plugin may write; a power cycle may reset it.":"");
+}
+function sendBuffet(){
+  const pct=Math.round(Number($("bpct").value)),per=Math.round(Number($("bper").value));
+  if(!(pct>=0&&pct<=100&&per>=10&&per<=140)){showError("Buffet strength is 0 to 100 and period 10 to 140");return;}
+  post("/api/buffet",{on:$("bon").checked,percent:pct,period:per});
+}
+for(const id of ["bon","bpct","bper"])$(id).addEventListener("change",sendBuffet);
+function render(){
+  renderBuffet();
+  document.body.classList.toggle("nc",!connected||!S);
+  const top=$("stop");
+  $("craft").textContent=lastCraft;
+  if(!connected||!S){
+    $("sdot").className="dot grey";$("stext").textContent="Can't reach X-Plane — is it running?";
+    top.textContent="Not connected";top.className="lbl";top.disabled=true;
+    showMain("notice");
+    notice('<p class="big">This page can\'t stop the motors right now. Use Stop yoke motors in X-Plane\'s Yoke menu, or the yoke button you bound to it.</p><p class="nc-try">Trying again…</p>');
+    $("nbar").classList.add("hide");$("toast").classList.add("hide");
+    return;
+  }
+  const v=S.view;
+  $("sdot").className="dot"+({fault:" red",yoke_off:" amber",busy:" amber"}[v]||"");
+  $("stext").textContent=status(S.status);
+  if(S.motors==="on"){top.textContent="Stop yoke motors";top.className="";top.disabled=false;}
+  else{top.textContent=S.motors==="stopped"?"Motors stopped":"Motors off";top.className="lbl";top.disabled=true;}
+  // the newest notice and the save toast are shared across pages
+  const nt=S.notice,nshow=!!nt&&nt.age_ms<NOTICE_MS;
+  $("nbar").classList.toggle("hide",!nshow);
+  if(nshow)$("nbar").textContent=nt.text;
+  const tst=S.toast&&S.toast.text==="kept"&&S.toast.age_ms<3000;
+  $("toast").classList.toggle("hide",!tst||!$("etoast").classList.contains("hide"));
+  if(page==="details"){showMain("det");renderDetails();return;}
+  if(v==="force_feel_off"){showMain("notice");
+    notice('<p class="big">Force feel is off. The motors are off, and the yoke is free and still flies the aircraft.</p><button class="nb" data-cmd="force_feel_on">Turn force feel on</button><p class="cap">The springs come on and hold the yoke at its resting point. Keep your hands on it.</p>');return;}
+  if(v==="fault"){showMain("notice");
+    const parts=String(S.status||"").split(" - ");let rem=parts.length>1?parts.slice(1).join(" — "):"";
+    if(rem){rem=rem[0].toUpperCase()+rem.slice(1);if(!/[.?!]$/.test(rem))rem+=".";}
+    // The reason says what failed and whether Retry can help (api.md, reason).
+    const head=/^Force feel unavailable/.test(S.status||"")?"Force feel is unavailable. The motors are stopped.":"The motors are stopped. "+rem;
+    notice('<p class="big">'+esc(head)+'</p>'+(S.reason?'<p class="why">'+esc(S.reason)+'</p>':'')
+      +'<button class="nb grey" data-cmd="retry">Retry</button><p class="cap">'
+      +(S.retry_helps===false?"Retry will try again, but it is expected to fail the same way. ":"")+'The yoke centres itself first. Hands off until it says Ready.</p>');return;}
+  showMain("feel");renderFeel();
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+let lastNotice="";
+function notice(html){if(html!==lastNotice){$("notice").innerHTML=html;lastNotice=html;}}
+function showMain(id){for(const m of ["feel","notice","det"])$(m).classList.toggle("hide",m!==id);}
+
+function renderFeel(){
+  const t=trying(),k=S.kept,ed=editable();
+  const n=S.changes||0,cmp=S.showing==="kept";
+  $("cmp").textContent=cmp?"Back to my changes":"Feel saved";$("cmp").classList.toggle("on",cmp);$("cmp").disabled=!n&&!cmp;
+  $("nchg").textContent=n?(n===1?"1 change":n+" changes"):"";
+  $("undo").disabled=!S.undo;$("discard").disabled=!n;$("keep").disabled=!n||cmp;
+  $("badge").textContent=S.marks||0;
+  const fc=$("foot").querySelector(".cap");fc.classList.toggle("amb",cmp);
+  fc.textContent=cmp?"You're feeling your saved settings. Touch any setting to go back to your changes.":"Changes reach the yoke straight away. Save to start every flight with them.";
+  $("yokeoff").classList.toggle("hide",S.view!=="yoke_off");
+  $("panel").classList.toggle("dim",S.view==="yoke_off");
+  document.querySelectorAll(".stp:not(.fs)").forEach(st=>{
+    const ax=st._ax,f=st.dataset.f,v=val(ax,f),[lo,hi]=bounds(ax,f);
+    st.querySelector("span").textContent=fmt(f,v);
+    st.classList.toggle("dis",!ed);
+    st.querySelector(".mi").disabled=v<=lo;st.querySelector(".pl").disabled=v>=hi;
+  });
+  for(const ax of AX){
+    $("c-"+ax).querySelectorAll(".cd[data-k]").forEach(d=>{const f=d.dataset.k;d.classList.toggle("hide",t[ax][f]===k[ax][f]);});
+  }
+  renderPitch();
+  renderRoll();
+}
+// Roll: the aileron model's inputs per side and what it makes of the wheel.
+function renderRoll(){
+  const col=$("c-roll"),a=S.roll||{},m=a.model,d=a.drive,i=a.inputs;
+  col.querySelector(".nowf").textContent=a.now_percent!=null?"Now "+a.now_percent+"% firm":"";
+  $("rceil").textContent=d&&d.ceiling_percent!=null?"the drive's limit now "+d.ceiling_percent+"%":"—";
+  const ias=S.ias_kt!=null?S.ias_kt+" kt IAS":"";
+  const src=i?(i.source==="surface"?"air over the aileron panels":"air from airspeed (this aircraft's panels aren't read)"):"";
+  col.querySelector(".sub").textContent=[src,ias].filter(Boolean).join(" · ");
+  const deg=v=>v==null?"—":Number(v).toFixed(1).replace("-","−")+"°";
+  const lb=v=>v==null?"—":Number(v).toFixed(2).replace("-","−")+" lb";
+  const side=(name,x,defl)=>!x?"":"<div class=\"row\"><span class=\"rl\"><span>"+name+"</span></span><span>"+esc((x.kt!=null?x.kt+" kt":"—")+" · α "+deg(x.alpha_deg)
+    +(x.stalled?" · "+Math.round(x.stalled*100)+"% stalled":"")+(defl!=null?" · aileron "+deg(defl)+(defl>=0?" up":" down"):""))+"</span></div>";
+  let h=i?side("Left aileron",i.left,m&&m.left_deg)+side("Right aileron",i.right,m&&m.right_deg):"";
+  if(m)h+="<div class=\"row\"><span class=\"rl\"><span>Wheel</span></span><span>"+esc(deg(m.wheel_deg)+" · rests at "+deg(m.rest_deg)+" (right positive)")+"</span></div>"
+    +"<div class=\"row\"><span class=\"rl\"><span>Torque at the grip</span></span><span>"+esc("model "+lb(m.torque_lb)+(d?" · drive "+lb(d.torque_lb):"")
+    +(d&&d.saturated?" · at the drive's limit: lighter than the model":"")+(d&&d.floored?" · below the drive's softest: force-exact":""))+"</span></div>";
+  $("rmodel").innerHTML=h;
+  if(typeof drawRollFigs==="function")drawRollFigs();
+}
+
+// ---------- details ----------
+function hhmmss(ms){const d=new Date(ms);return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,"0")).join(":");}
+function markLine(m){
+  const out=[];
+  if(m.ias_kt!=null)out.push(m.ias_kt+" kt");
+  if(m.bank_deg!=null&&Math.abs(m.bank_deg)>=5)out.push(Math.abs(m.bank_deg)+"° bank "+(m.bank_deg<0?"left":"right"));
+  if(m.vertical_fpm!=null&&Math.abs(m.vertical_fpm)>=200)out.push(m.vertical_fpm>0?"climb":"descent");
+  if(m.flaps_deg!=null)out.push("flaps "+m.flaps_deg+"°");
+  return out.join(" · ");
+}
+async function loadMarks(){
+  if(noteBusy)return;
+  try{const r=await getJSON("/api/marks",3000);marks=r;marksCount=S?S.marks:-1;drawMarks();}catch(e){}
+}
+function drawMarks(){
+  const box=$("mlist");
+  if(box.contains(document.activeElement))return;
+  box.textContent="";
+  for(const m of marks){
+    const d=document.createElement("div");d.className="mk";
+    d.innerHTML='<div class="mt"><span></span><span class="chip"></span></div><div class="cap"></div><div class="nt"></div><input maxlength="200" enterkeyhint="done" placeholder="What did it feel like?">';
+    d.querySelector(".mt span").textContent=hhmmss(m.utc_ms);
+    d.querySelector(".chip").textContent=m.version==="kept"?"Saved":"Changed";
+    d.querySelector(".cap").textContent=markLine(m);
+    const inp=d.querySelector("input"),nt=d.querySelector(".nt");inp.value=m.note||"";
+    const shown=()=>{nt.textContent=m.note||"";nt.classList.toggle("hide",!m.note);inp.classList.toggle("hide",!!m.note);};
+    shown();
+    nt.addEventListener("click",()=>{nt.classList.add("hide");inp.classList.remove("hide");inp.focus();});
+    const save=async()=>{
+      if(inp.value===(m.note||"")){shown();return;}
+      noteBusy=true;m.note=inp.value;shown();
+      await post("/api/note",{id:m.id,note:inp.value});noteBusy=false;
+    };
+    inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();});
+    inp.addEventListener("blur",save);
+    box.appendChild(d);
+  }
+}
+let histTimer=0;
+async function loadHist(){
+  clearTimeout(histTimer);
+  if(page!=="details"||document.hidden)return;
+  try{hist=await getJSON("/api/history",3000);if(connected)drawHist();}catch(e){}
+  histTimer=setTimeout(loadHist,1000);
+}
+function sizeSvg(host){
+  let svg=host.firstChild;if(!svg)svg=el("svg",{},host);
+  const w=host.clientWidth,h=host.clientHeight;svg.setAttribute("viewBox","0 0 "+w+" "+h);svg.textContent="";
+  return {svg,w,h};
+}
+function drawSpring(ax){
+  const host=$("sp-"+ax),{svg,w,h}=sizeSvg(host);if(!w||!h)return;
+  const L=30,R=8,T=6,pw=w-L-R,two=pw<340,B=two?58:34,ph=h-T-B,cx=L+pw/2,cy=T+ph/2;
+  const sh=S.pitch_curve||S.spring_shape||[];
+  const f=x=>{const a=Math.abs(x)/100*(sh.length-1),i=Math.min(sh.length-2,Math.floor(a)),fr=a-i;return Math.sign(x)*((sh[i]||0)*(1-fr)+(sh[i+1]||0)*fr)/1000;};
+  const X=p=>cx+p/100*pw/2,Y=v=>cy-v*ph/2;
+  const tf=txt("text",{"text-anchor":"middle",transform:"translate(14 "+cy+") rotate(-90)"},"Force",svg);
+  el("line",{x1:L,x2:L,y1:T,y2:T+ph,stroke:"#3a424c","stroke-width":1.5},svg);
+  el("line",{x1:L,x2:L+pw,y1:T+ph,y2:T+ph,stroke:"#3a424c","stroke-width":1.5},svg);
+  el("line",{x1:L,x2:L+pw,y1:cy,y2:cy,stroke:"#5d6670","stroke-dasharray":"6 6"},svg);
+  el("line",{x1:cx,x2:cx,y1:T,y2:T+ph,stroke:"#5d6670","stroke-dasharray":"6 6"},svg);
+  if(sh.length>1){
+    let d="";for(let p=-100;p<=100;p+=2.5){const q=p===0?-0.001:p;d+=(d?"L":"M")+X(p).toFixed(1)+" "+Y(f(q)).toFixed(1);if(p===0)d+="L"+X(0).toFixed(1)+" "+Y(f(0.001)).toFixed(1);}
+    el("path",{d,fill:"none",stroke:"#f2a93b","stroke-width":3,"stroke-linejoin":"round"},svg);
+  }
+  const ends=ax==="pitch"?["Full forward","Full aft"]:["Full left","Full right"];
+  txt("text",{"text-anchor":"start",x:L,y:two?h-32:h-6},ends[0],svg);
+  txt("text",{"text-anchor":"middle",x:cx,y:h-6},"Yoke travel",svg);
+  txt("text",{"text-anchor":"end",x:L+pw,y:two?h-32:h-6},ends[1],svg);
+  const yp=S[ax]&&S[ax].yoke_percent;
+  if(yp!=null&&sh.length>1){
+    const p=Math.max(-100,Math.min(100,yp)),x=X(p),y=Y(f(p||0.001));
+    el("circle",{cx:x,cy:y,r:8,fill:"#ffffff"},svg);
+    const dir=ax==="pitch"?(p<0?"forward":"aft"):(p<0?"left":"right");
+    const right=x<L+pw*0.5;
+    txt("text",{"text-anchor":right?"start":"end",x:right?x+16:x-16,y:right?y+30:y-16,class:"wh",style:"fill:#e8ebee"},"yoke "+Math.abs(Math.round(p))+"% "+dir,svg);
+  }
+}
+function drawXP(){
+  const p=S.pitch||{},r=S.roll||{};
+  const rows=[];
+  const add=(name,a,b,fm)=>{if(a==null&&b==null)return;rows.push([name,a==null?"":fm(a),b==null?"":fm(b)]);};
+  const pi=p.inputs||{};
+  add("Airflow",pi.tail_kt,r.airflow_kt,v=>v+" kt");
+  add("Air pressure",pi.tail_pa,r.airflow_pa,v=>(v/1000).toFixed(2)+" kPa");
+  add("Angle of attack",p.aoa_deg,r.aoa_deg,v=>Number(v).toFixed(1).replace("-","−")+"°");
+  add("Deflection",p.deflection_deg,r.deflection_deg,v=>Number(v).toFixed(1).replace("-","−")+"°");
+  add("Stalled",p.stalled,r.stalled,v=>v?"Yes":"No");
+  add("Yoke force from aircraft",p.native_lb,r.native_lb,v=>Number(v).toFixed(1)+" lb");
+  let h="";for(const x of rows)h+="<tr><td>"+esc(x[0])+"</td><td>"+esc(x[1])+"</td><td>"+esc(x[2])+"</td></tr>";
+  const pm=p.model,pd=p.drive;
+  const rest=pm?pct(pm.rest_percent)+" (model)":"";
+  h+='<tr class="yh"><td colspan="3">Yoke</td></tr>';
+  if(rest)h+="<tr><td>Resting point</td><td colspan=\"2\">"+rest+"</td></tr>";
+  if(pd&&pd.registers)h+="<tr><td>Registers</td><td colspan=\"2\">"+esc([pd.registers.strength,pd.registers.trim_position,pd.registers.bias].join(" · ").replace(/-/g,"−"))+"</td></tr>";
+  if(pd&&pd.update_hz!=null)h+="<tr><td>Updates</td><td colspan=\"2\">"+Number(pd.update_hz).toFixed(1)+"/s</td></tr>";
+  h+="<tr><td>Motors</td><td colspan=\"2\">"+(S.motors==="on"?"On":"Off")+"</td></tr>";
+  $("xpb").innerHTML=h;
+}
+function drawHist(){
+  const host=$("hist"),{svg,w,h}=sizeSvg(host);if(!w||!h||!hist)return;
+  const LW=Math.min(270,w*0.2),L=LW+24,R=36,T=52,B=36,pw=w-L-R,lh=(h-T-B)/3;
+  const X=t=>L+(t+120000)/120000*pw;
+  const lanes=[["Pitch force",6,"#f2a93b","",7],["Roll firmness",2,"#f2a93b","8 7"],["Airflow over the tail",3,"#8b949e",""]];
+  const sm=hist.samples||[];
+  let amax=60;for(const s of sm)if(s[3]!=null&&s[3]>amax)amax=s[3];
+  lanes.forEach(([name,i,col,dash,i2],n)=>{
+    const top=T+n*lh,mid=top+lh/2;
+    txt("text",{x:0,y:mid+9,class:"lbl26",style:"font-size:26px;fill:"+(n<2?"#f2a93b":"#8b949e")},name,svg);
+    let lo,hi;
+    if(n===0){let m=1;for(const s of sm)for(const j of [i,i2])if(s[j]!=null)m=Math.max(m,Math.abs(s[j]));hi=Math.ceil(m);lo=-hi;}
+    else if(n===1){let fmax=40;for(const s of sm)if(s[i]!=null&&s[i]>fmax)fmax=s[i];lo=20;hi=Math.min(100,Math.ceil(fmax/10)*10);}
+    else{lo=0;hi=amax*1.05;}
+    const Y=v=>top+lh-6-(v-lo)/(hi-lo)*(lh-12);
+    const trace=(j,c,ds,wd)=>{let d="",pen=false;
+      for(const s of sm){const v=s[j];if(v==null){pen=false;continue;}d+=(pen?"L":"M")+X(s[0]).toFixed(1)+" "+Y(v).toFixed(1);pen=true;}
+      el("path",{d,fill:"none",stroke:c,"stroke-width":wd,"stroke-dasharray":ds,"stroke-linejoin":"round"},svg);};
+    if(n===0){el("line",{x1:L,x2:L+pw,y1:Y(0),y2:Y(0),stroke:"#3a424c"},svg);trace(i2,"#e8ebee","6 5",2);}
+    trace(i,col,dash,n<2?2.5:2);
+  });
+  el("line",{x1:L,x2:L+pw,y1:T+3*lh+4,y2:T+3*lh+4,stroke:"#3a424c","stroke-width":1.5},svg);
+  const ay=h-4;
+  txt("text",{x:X(-120000),y:ay,"text-anchor":"start"},"−2 min",svg);
+  txt("text",{x:X(-60000),y:ay,"text-anchor":"middle"},"−1 min",svg);
+  txt("text",{x:X(0),y:ay,"text-anchor":"middle"},"now",svg);
+  for(const m of hist.marks||[]){
+    if(m.t_ms<-120000||m.t_ms>0)continue;
+    const x=X(m.t_ms);
+    el("line",{x1:x,x2:x,y1:T-2,y2:T+3*lh+4,stroke:"#e8ebee","stroke-width":1.5,"stroke-dasharray":"5 5"},svg);
+    el("path",{d:"M"+x+" "+(T+2)+"V"+(T-22)+"M"+(x+2)+" "+(T-21)+"h14l-3 5 3 5h-14z",stroke:"#ffffff","stroke-width":2.5,fill:"#ffffff","stroke-linejoin":"round"},svg);
+  }
+}
+function ago(ms){const s=Math.round(ms/1000);return s<60?s+" s ago":s<3600?Math.round(s/60)+" min ago":Math.round(s/3600)+" h ago";}
+function renderNotices(){
+  const list=S.notices||[];
+  $("nlist").innerHTML=list.length?list.map(n=>'<p><span class="cap">'+esc(ago(n.age_ms))+'</span>'+esc(n.text)+'</p>').join(""):'<p class="cap">None since X-Plane started.</p>';
+}
+function renderDetails(){
+  drawXP();drawSpring("pitch");drawSpring("roll");if(hist)drawHist();renderNotices();
+  const l=S.listen;
+  $("listen").textContent=l&&l.addresses&&l.addresses.length?l.addresses[0]+":"+l.port:"";
+}
+function openDetails(){page="details";document.body.classList.add("dt");marksCount=-1;render();loadMarks();loadHist();}
+function closeDetails(){page="feel";document.body.classList.remove("dt");clearTimeout(histTimer);hist=null;render();}
+
+// ---------- actions ----------
+const tap=(id,fn)=>$(id).addEventListener("click",fn);
+tap("cmp",()=>{if(S)post("/api/show",{which:S.showing==="kept"?"trying":"kept"});});
+tap("undo",()=>post("/api/undo",{}));
+tap("discard",()=>post("/api/discard",{}));
+tap("keep",()=>post("/api/keep",{}));
+tap("mark",()=>post("/api/mark",{}));
+tap("stop",()=>{if(S&&S.motors==="on")post("/api/command",{name:"stop_motors"});});
+tap("dbtn",openDetails);
+tap("back",closeDetails);
+$("notice").addEventListener("click",e=>{const b=e.target.closest("[data-cmd]");if(b){b.disabled=true;post("/api/command",{name:b.dataset.cmd}).then(()=>{b.disabled=false;});}});
+document.addEventListener("gesturestart",e=>e.preventDefault());
+document.addEventListener("dblclick",e=>e.preventDefault());
+window.addEventListener("resize",()=>{if(S)render();});
+render();poll();
+</script>
+<!-- The aileron model, the same block as aileron.html's; aileron_vectors.mjs fails if they differ. -->
+<script id="aileron-model">
+// The two ailerons about their hinges, linked to the wheel. Each aileron's
+// angle is trailing edge up positive; the wheel's angle is right positive.
+// Kept free of the page so the feel page can reuse it; aileron_vectors.json
+// pins its numbers for the plugin's C++ copy.
+const Aileron=(()=>{
+  const INLB=0.112985,KT=0.514444,RHO=1.225,DEG=Math.PI/180,LBF=4.44822;
+  const P={area:0.85,chord:0.28,chd:0.30,cha:0.15,up:20*DEG,down:15*DEG,wheel:86*DEG,rim:0.15,
+    keep:0.4,inertia:0.10,wheelInertia:0.010,zeta:0.4,wash:5,alphaClamp:30*DEG,minPa:2.5,kRev:1.0};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  // Air over the ailerons, Pa: airspeed plus a little prop wash (they sit outside most of the slipstream).
+  const wingQ=(kt,throttle)=>{const v=kt*KT,w=P.wash*throttle*Math.max(0,1-v/80);return .5*RHO*(v*v+w*w);};
+  // The linkage: a parabola u = a*phi + b*phi^2 through neutral and both stops,
+  // phi the aileron's own command (right: +wheel, left: -wheel). Equal rates at
+  // neutral, more going up, less going down.
+  const A=()=>(P.up+P.down)/(2*P.wheel),B=()=>(P.up-P.down)/(2*P.wheel*P.wheel);
+  const angles=t=>{const a=A(),b=B();return {left:-a*t+b*t*t,right:a*t+b*t*t,dLeft:-a+2*b*t,dRight:a+2*b*t};};
+  // One aileron's moment about its hinge, N·m, trailing edge up positive. s[k]
+  // is that side as X-Plane reports it: {q Pa, alpha rad, stalled 0..1}. The
+  // coefficients and the weight are the profile's figures, carried in s so
+  // the page can turn them. A stalled panel keeps s.keep of both slopes.
+  // Air from behind (beyond ±90° with air over the gate; decision 17, the
+  // owner, 2026-11-09): the deflection's moment turns over, s.kRev of it (P's
+  // when missing), so the aileron runs away from neutral to a stop, and the
+  // float takes the angle against the reversed stream. It turns over smoothly,
+  // never across a hair's width: within the angle clamp the deflection's
+  // moment is whole; past it, cos(alpha)/cos(clamp) of it, held to ±1, its
+  // reversed half times kRev, so 0 with the air across the aileron (±90°) and
+  // -kRev from ±150°. reversed reports the air mostly from behind; nothing in
+  // the moment steps on it; over the gate its departure from 1 fades in with
+  // q, none at minPa to all at twice it. The plugin's C++ copy (aileron.hpp)
+  // has it too, with k_rev the profile's figure.
+  const turnOf=(a,kRev,q)=>{if (Math.abs(a)<=P.alphaClamp) return 1;const c=clamp(Math.cos(a)/Math.cos(P.alphaClamp),-1,1),turn=c>=0?c:kRev*c,share=clamp((q-P.minPa)/P.minPa,0,1);
+    return share>=1?turn:1+(turn-1)*share;};
+  const side=(s,k,u)=>{
+    const p=s[k],q=p.q>=P.minPa?p.q:0,f=clamp(p.stalled,0,1),eff=1-(1-s.keep)*f;
+    const reversed=q>0&&Math.abs(p.alpha)>Math.PI/2,kRev=Number.isFinite(s.kRev)?s.kRev:P.kRev,turn=q>0?turnOf(p.alpha,kRev,q):1;
+    const alpha=clamp(reversed?(p.alpha>0?Math.PI-p.alpha:-Math.PI-p.alpha):p.alpha,-P.alphaClamp,P.alphaClamp),qsc=q*P.area*P.chord;
+    const air=-qsc*s.chd*turn*eff*u,float_=qsc*s.cha*eff*alpha,weight=-s.unbalance*INLB*Math.cos(u);
+    return {air,float:float_,weight,net:air+float_+weight,q,alpha,eff,stalled:f,reversed,turn};
+  };
+  // The wheel's torque, N·m right positive, by virtual work through the linkage.
+  const torques=(s,t)=>{
+    const g=angles(t),L=side(s,'left',g.left),R=side(s,'right',g.right);
+    const left=(L.air+L.float)*g.dLeft,right=(R.air+R.float)*g.dRight,weight=L.weight*g.dLeft+R.weight*g.dRight;
+    return {left,right,weight,total:left+right+weight,L,R,g};
+  };
+  const torque=(s,t)=>torques(s,t).total;
+  const rimLb=T=>T/P.rim/LBF;                 // N·m at the wheel -> lb at the grip
+  const airless=s=>!(s.left.q>=P.minPa||s.right.q>=P.minPa);
+  const indifferent=s=>airless(s)&&Math.abs(s.unbalance)<1e-12; // zero torque everywhere: it rests where it is left
+  // Where the torque is zero, friction aside; a stop when one sign wins
+  // everywhere. Pushed outward at both stops (air from behind, or a negative
+  // float slope) the wheel is bistable: from where it is (from, rad) it is
+  // followed, in quarter degrees, the way the torque turns it, to a stop or
+  // to a balance it meets first (then bisected), so a wheel at a stop stays
+  // there while that stop pushes outward, however hard the other pushes.
+  // With no wheel given, or no torque where it is, the harder-pushed stop, 0
+  // on a tie.
+  const rest=(s,from)=>{
+    if (indifferent(s)) return 0;
+    const w=P.wheel;let lo=-w,hi=w;
+    const tlo=torque(s,lo),thi=torque(s,hi);
+    if (tlo<0&&thi>0) {
+      const sign=t=>{const n=torque(s,t);return n>0?1:n<0?-1:0;};
+      let t=Number.isFinite(from)?clamp(from,-w,w):0;const way=Number.isFinite(from)?sign(t):0;
+      if (way===0) return -tlo>thi?-w:thi>-tlo?w:0;
+      for (;;) {
+        const e=clamp(t+way*0.25*DEG,-w,w);
+        if (e===t) return t;
+        if (sign(e)!==way) {let a=t,b=e;for (let i=0;i<60;i++) {const m=(a+b)/2;if (sign(m)===way) a=m;else b=m;}return (a+b)/2;}
+        t=e;
+      }
+    }
+    if (tlo<0) return -w;if (thi>0) return w;
+    for (let i=0;i<60;i++) {const m=(lo+hi)/2;if (torque(s,m)>0) lo=m;else hi=m;}
+    return (lo+hi)/2;
+  };
+  // One step of the free wheel: the ailerons' inertia through the linkage plus the wheel's, air damping, friction, stops.
+  const step=(st,s,dt)=>{
+    const T=torques(s,st.t),g=T.g;
+    const I=P.wheelInertia+P.inertia*(g.dLeft*g.dLeft+g.dRight*g.dRight);
+    const K=Math.max(0,(torque(s,st.t-.01)-torque(s,st.t+.01))/.02);
+    const damping=2*P.zeta*Math.sqrt(I*K)+0.002;
+    const friction=s.friction*LBF*P.rim;    // lb at the rim -> N·m at the wheel
+    let tq=T.total-damping*st.w;
+    if (Math.abs(st.w)<1e-4) {
+      if (Math.abs(T.total)<=friction) {st.w=0;return;}
+      tq-=Math.sign(T.total)*friction;
+    } else tq-=Math.sign(st.w)*friction;
+    const w0=st.w;st.w+=tq/I*dt;
+    if (w0!==0 && Math.sign(st.w)!==Math.sign(w0) && Math.abs(T.total)<=friction) st.w=0;
+    st.t+=st.w*dt;
+    if (st.t>P.wheel) {st.t=P.wheel;if (st.w>0) st.w=0;}
+    if (st.t<-P.wheel) {st.t=-P.wheel;if (st.w<0) st.w=0;}
+  };
+  // Wheel angle <-> the roll drive's counts: 13000 at either stop, right positive (the sign is untested on the drive).
+  const TRAVEL=13000,UNIT=1000/13000/100,SECANT=60,SOFTEST=20,PROTECT=4500;
+  const exact=t=>clamp(t/P.wheel,-1,1)*TRAVEL;
+  const counts=t=>Math.round(exact(t));
+  const angle=c=>clamp(c,-TRAVEL,TRAVEL)/TRAVEL*P.wheel;
+  const lround=v=>Math.sign(v)*Math.round(Math.abs(v));
+  // tuning.hpp's worst_force_units and drive_ceiling (decision 16): the
+  // drive's line F(x) = held - k*(x - centre), k = strength*10/travel units per
+  // count, is worst at the stop farther from its zero; the ceiling is the
+  // strongest whole percent, 400 down to 21, whose line from line(s) =
+  // [centre, held] stays within 4000 units over the travel, else 20.
+  const MARGIN=4000,UNITS_PER_PERCENT=10,STRONGEST=MARGIN/UNITS_PER_PERCENT;
+  const worstForce=(strength,centre,held,travel)=>{
+    const k=strength*UNITS_PER_PERCENT/travel;
+    return Math.max(Math.abs(held-k*(travel-centre)),Math.abs(held-k*(-travel-centre)));
+  };
+  const driveCeiling=(travel,line)=>{
+    for (let s=STRONGEST;s>SOFTEST;s--) {const [centre,held]=line(s);if (worstForce(s,centre,held,travel)<=MARGIN) return s;}
+    return SOFTEST;
+  };
+  // What the drive is told for the wheel at x0 counts, solve_pitch's way: the
+  // strength is the secant from the rest to x0 (at least 60 counts), held to
+  // 20..the drive's ceiling (no firmest setting: the strongest spring whose
+  // line, with the centre it would be sent with, stays within the margin over
+  // the whole travel); the centre is the rest reached from x0. Below 20 % (floored) one of two rules:
+  // rest-exact keeps the centre on the rest and the wheel is firmer than the
+  // model; force-exact puts the centre where the 20 % spring gives the model's
+  // torque at x0, so with no air the centre is the wheel itself. Above the
+  // ceiling (saturated) the rest stays exact and the torque is lighter.
+  const solve=(s,x0,unitsPerNm,forceExact)=>{
+    const u=clamp(unitsPerNm,1,1e6);
+    const r=rest(s,Number.isFinite(x0)?angle(x0):NaN),restCounts=exact(r),atStop=Math.abs(restCounts)>=TRAVEL-0.5;
+    const anchorNm=atStop?torque(s,r):0;
+    const x=Number.isFinite(x0)?clamp(x0,-TRAVEL,TRAVEL):restCounts;
+    let dx=x-restCounts;
+    if (Math.abs(dx)<SECANT) {
+      const side_=dx>0?1:dx<0?-1:(restCounts>0?-1:1);
+      dx=side_*SECANT;
+      if (Math.abs(restCounts+dx)>TRAVEL) dx=-dx;
+    }
+    const slope=(anchorNm-torque(s,angle(restCounts+dx)))/dx; // N·m per count, restoring positive
+    const want=slope*u/UNIT;
+    const ceiling=driveCeiling(TRAVEL,strength=>[lround(clamp(restCounts+anchorNm*u/(strength*UNIT),-TRAVEL,TRAVEL)),0]);
+    const saturated=want>ceiling+1e-9,floored=want<SOFTEST-0.5;
+    const strength=clamp(lround(clamp(want,SOFTEST,ceiling)),SOFTEST,ceiling),ks=strength*UNIT;
+    const modelNm=torque(s,angle(x));
+    let c=floored&&forceExact?x+modelNm*u/ks:restCounts+anchorNm*u/ks;
+    const centreLimited=Math.abs(c)>TRAVEL+0.5;c=clamp(c,-TRAVEL,TRAVEL);
+    const centre=lround(c);
+    return {x,modelNm,restCounts,slopeNmPerCount:slope,want,ceiling,strength,centre,driveNm:-ks*(x-centre)/u,
+      saturated,floored,forceExact:floored&&forceExact,centreLimited,
+      fullWheelNm:strength*TRAVEL*UNIT/u,fullWheelUnits:strength*TRAVEL*UNIT,shrink:slope>0?ks/u/slope:NaN};
+  };
+  return {P,INLB,KT,DEG,LBF,TRAVEL,UNIT,SOFTEST,PROTECT,MARGIN,clamp,wingQ,angles,side,torques,torque,rimLb,airless,indifferent,rest,step,exact,counts,angle,solve};
+})();
+</script>
+<script id="roll-draw">
+"use strict";
+// ---------- roll: the aileron page's drawing, from the live state ----------
+// aileron.html's #wings and #wheel, drawn from S.roll (api.md "State fields")
+// and the profile's aileron figures; the HUD's roll card (docs/brunner/hud/
+// roll-card.md) draws the same. Each aileron's angle is trailing edge up
+// positive; the wheel's angle and torque_lb are right positive. The arrows'
+// moments are the model's own: the aileron-model block above, aileron.html's.
+const RL=(()=>{
+  const A=Aileron,AP=A.P,AP0=Object.assign({},A.P),DEG=A.DEG,len=150;
+  const FIG={area_m2:["area",1],chord_m:["chord",1],up_deg:["up",DEG],down_deg:["down",DEG],wheel_deg:["wheel",DEG],rim_m:["rim",1]};
+  const W=$("rwings"),Y=$("rwheel");
+  const arrow=(c,p)=>{const g=el("g",{},p);return {g,l:el("line",{stroke:c,"stroke-width":5,"stroke-linecap":"round"},g),h:el("path",{fill:c},g)};};
+  const section=(hx,hy,title)=>{
+    const g=el("g",{},W),streaks=el("g",{},g),lines=[];
+    for(let i=0;i<10;i++)lines.push(el("line",{stroke:"#3a4450","stroke-width":2,"stroke-linecap":"round"},streaks));
+    const offs=lines.map((_,i)=>({x:(i*97)%380-190,y:(i*61)%180-90}));
+    el("path",{d:`M${hx},${hy-16} C${hx+50},${hy-30} ${hx+110},${hy-30} ${hx+140},${hy-6} Q${hx+150},${hy} ${hx+140},${hy+6} C${hx+110},${hy+18} ${hx+50},${hy+16} ${hx},${hy+16} Z`,fill:"#39424d",stroke:"#56606b"},g);
+    txt("text",{x:hx+70,y:hy+50,"text-anchor":"middle"},title,g);
+    const ail=el("g",{},g);
+    el("path",{d:`M0,-16 L${-len},-3 L${-len},3 L0,16 Z`,fill:"#5b6672",stroke:"#7a8591"},ail);
+    const stall=el("path",{d:`M0,-16 L${-len},-3 L${-len},3 L0,16 Z`,fill:"var(--red)",opacity:0},ail);
+    el("circle",{cx:hx,cy:hy,r:7,fill:"#15181c",stroke:"#c9d0d6","stroke-width":2},g);
+    const stops=el("g",{},g);
+    const wA=arrow("var(--weight)",g),aA=arrow("var(--blue)",g),fA=arrow("var(--green)",g);
+    const arc=el("path",{fill:"none",stroke:"var(--amber)","stroke-width":5,"stroke-linecap":"round"},g),head=el("path",{fill:"var(--amber)"},g);
+    const t1=el("text",{x:hx-len-30,y:hy-132,class:"dup"},g),t2=el("text",{x:hx-len-30,y:hy-110,class:"dup"},g);
+    return {hx,hy,streaks,lines,offs,ail,stall,stops,stopsKey:"",wA,aA,fA,arc,head,t1,t2,v:0,stalled:0};
+  };
+  txt("text",{x:780,y:26,"text-anchor":"end"},"nose this way →",W);
+  const L=section(240,170,"Left wing"),R=section(630,170,"Right wing");
+  // as the aileron page: arrows grow with the square root of the moment, 0.5 N·m -> 40 px, capped
+  const px=nm=>Math.sign(nm)*Math.min(110,40*Math.sqrt(Math.abs(nm)/.5));
+  const ail=u=>Math.abs(u/DEG)<.05?"neutral":Math.abs(u/DEG).toFixed(1)+"° "+(u>0?"up":"down");
+  const side=(Sx,p,u)=>{
+    const {hx,hy}=Sx;
+    const key=AP.up+","+AP.down;
+    if(key!==Sx.stopsKey){Sx.stopsKey=key;Sx.stops.textContent="";
+      for(const [a,t,dy] of [[AP.up,"up stop",-8],[-AP.down,"down stop",20]]){
+        const x=hx-Math.cos(a)*(len+16),y=hy-Math.sin(a)*(len+16);
+        el("line",{x1:hx,y1:hy,x2:x,y2:y,stroke:"#2c333b","stroke-dasharray":"4 6"},Sx.stops);
+        txt("text",{x:x-4,y:y+dy,"text-anchor":"end",class:"stopl"},t,Sx.stops);}}
+    Sx.ail.setAttribute("transform",`translate(${hx},${hy}) rotate(${u/DEG})`);
+    Sx.stall.setAttribute("opacity",(p.stalled*.55).toFixed(2));
+    Sx.v=Math.sqrt(2*p.q/1.225);Sx.stalled=p.stalled;
+    Sx.streaks.setAttribute("transform",`translate(${hx-40},${hy}) rotate(${p.alpha/DEG})`);
+    const c=Math.cos(u),s=Math.sin(u),at=f=>[hx-c*len*f,hy-s*len*f];
+    const [wx,wy]=at(.35);setArrow(Sx.wA,wx,wy,wx,wy-px(p.weight));
+    const nx=-s,ny=c;
+    const [ax,ay]=at(.5),aL=-px(p.air);setArrow(Sx.aA,ax,ay,ax+nx*aL,ay+ny*aL);
+    const [fx,fy]=at(.75),fL=-px(p.float);setArrow(Sx.fA,fx,fy,fx+nx*fL,fy+ny*fL);
+    const mag=Math.min(1.6,Math.abs(px(p.net))/70),r=44;
+    if(Math.abs(p.net)<0.003||mag<.04){Sx.arc.setAttribute("d","");Sx.head.setAttribute("d","");}
+    else{const a0=Math.PI*1.15,sg=p.net>0?1:-1,a1=a0+sg*mag*2.2,pt=a=>[hx+r*Math.cos(a),hy+r*Math.sin(a)];
+      const [x0,y0]=pt(a0),[x1,y1]=pt(a1);
+      Sx.arc.setAttribute("d",`M${x0},${y0} A${r},${r} 0 ${mag*2.2>Math.PI?1:0} ${sg>0?1:0} ${x1},${y1}`);
+      const tx=-Math.sin(a1)*sg,ty=Math.cos(a1)*sg;
+      Sx.head.setAttribute("d",`M${x1+tx*14},${y1+ty*14} L${x1-ty*9},${y1+tx*9} L${x1+ty*9},${y1-tx*9} Z`);}
+  };
+  // the wheel, from the pilot's seat: right is clockwise on screen
+  const hub={x:400,y:150},WR=118;
+  el("circle",{cx:hub.x,cy:hub.y,r:WR+22,fill:"none",stroke:"#2c333b","stroke-dasharray":"3 8"},Y);
+  const ticks=el("g",{},Y);let ticksKey="";
+  const wheelG=el("g",{},Y);
+  el("path",{d:"M-26,24 C-120,46 -162,-30 -140,-96 C-130,-124 -100,-124 -94,-96 L-78,-30 C-66,6 -30,14 0,14 C30,14 66,6 78,-30 L94,-96 C100,-124 130,-124 140,-96 C162,-30 120,46 26,24 Z",fill:"#c9d0d6",stroke:"#e8ebee","stroke-width":2},wheelG);
+  el("circle",{cx:0,cy:0,r:30,fill:"#39424d",stroke:"#7a8591","stroke-width":3},wheelG);
+  el("circle",{cx:0,cy:-14,r:4,fill:"var(--amber)"},wheelG);
+  // where it rests hands-off: a white tick on the travel ring, as on the HUD card
+  const restT=el("path",{fill:"#e8ebee",stroke:"#15181c","stroke-width":1.5},Y);
+  const wArc=el("path",{fill:"none",stroke:"var(--amber)","stroke-width":6,"stroke-linecap":"round"},Y),wHead=el("path",{fill:"var(--amber)"},Y);
+  const wT1=el("text",{x:20,y:26,class:"dup"},Y),wT2=el("text",{x:20,y:256,class:"dup"},Y);
+  const wheelWords=d=>Math.abs(d)<.05?"level":Math.abs(d).toFixed(1)+"° "+(d>0?"right":"left");
+  const dirLb=v=>Math.abs(v)<.005?"none":(v>0?"right":"left")+" "+Math.abs(v).toFixed(2)+" lb";
+  function drawWheel(m,indiff){
+    const key=String(AP.wheel);
+    if(key!==ticksKey){ticksKey=key;ticks.textContent="";
+      for(const [a,label,an] of [[-AP.wheel,"left stop","end"],[AP.wheel,"right stop","start"],[0,"level","middle"]]){
+        const x=hub.x+Math.sin(a)*(WR+22),y=hub.y-Math.cos(a)*(WR+22);
+        el("line",{x1:hub.x+Math.sin(a)*(WR+12),y1:hub.y-Math.cos(a)*(WR+12),x2:x,y2:y,stroke:"#56606b","stroke-width":2},ticks);
+        txt("text",{x:x+Math.sin(a)*12,y:a===0?y+30:y-Math.cos(a)*12+6,"text-anchor":an,class:a===0?"":"stopl"},label,ticks);}}
+    const t=Number(m.wheel_deg)||0;
+    wheelG.setAttribute("transform",`translate(${hub.x},${hub.y}) rotate(${t})`);
+    if(indiff||m.rest_deg==null)restT.setAttribute("d","");
+    else{const a=m.rest_deg*DEG,ux=Math.sin(a),uy=-Math.cos(a),tx=-uy,ty=ux,r0=WR+6,r1=WR+28;
+      restT.setAttribute("d",`M${hub.x+ux*r0},${hub.y+uy*r0} L${hub.x+ux*r1+tx*8},${hub.y+uy*r1+ty*8} L${hub.x+ux*r1-tx*8},${hub.y+uy*r1-ty*8} Z`);}
+    const f=Number(m.torque_lb)||0,mag=Math.min(1.6,Math.abs(f)/1.5),r=62;
+    if(Math.abs(f)<0.005||mag<.03){wArc.setAttribute("d","");wHead.setAttribute("d","");}
+    else{const a0=-Math.PI/2-0.3,sg=f>0?1:-1,a1=a0+sg*mag*1.6,pt=a=>[hub.x+r*Math.cos(a),hub.y+r*Math.sin(a)];
+      const [x0,y0]=pt(a0),[x1,y1]=pt(a1);
+      wArc.setAttribute("d",`M${x0},${y0} A${r},${r} 0 0 ${sg>0?1:0} ${x1},${y1}`);
+      const tx=-Math.sin(a1)*sg,ty=Math.cos(a1)*sg;
+      wHead.setAttribute("d",`M${x1+tx*16},${y1+ty*16} L${x1-ty*10},${y1+tx*10} L${x1+ty*10},${y1-tx*10} Z`);}
+    wT1.textContent="Ailerons turn it "+dirLb(f);
+    wT2.textContent="Wheel "+wheelWords(t)+(indiff?" · stays where left":m.rest_deg!=null?" · rests "+wheelWords(m.rest_deg):"");
+  }
+  // The profile's aileron figures into the model's: the plugin's own numbers, the page's where one is missing.
+  function figures(){
+    Object.assign(AP,AP0);
+    const o={};for(const f of (S&&S.profile&&S.profile.aileron_figures)||[])o[f.key]=f.flown!=null?f.flown:f.value;
+    for(const k in FIG)if(Number.isFinite(o[k]))AP[FIG[k][0]]=o[k]*FIG[k][1];
+    const n=(k,d)=>Number.isFinite(o[k])?o[k]:d;
+    return {chd:n("hinge_slope_per_rad",AP0.chd),cha:n("alpha_slope_per_rad",AP0.cha),keep:n("stall_factor",AP0.keep),kRev:n("k_rev",AP0.kRev),unbalance:n("unbalance_inlb",0),friction:0};
+  }
+  const sideIn=x=>({q:Number(x&&x.pa)||0,alpha:(Number(x&&x.alpha_deg)||0)*DEG,stalled:Number(x&&x.stalled)||0});
+  function draw(){
+    const a=S&&S.roll,m=a&&a.model,stage=$("rstage");
+    // no roll model (no roll, or an aircraft without a profile): no drawing; the rows say what there is
+    stage.classList.toggle("hide",!m);if(!m)return;
+    const s=figures(),i=a.inputs;s.left=sideIn(i&&i.left);s.right=sideIn(i&&i.right);
+    const indiff=A.indifferent(s);
+    for(const [Sx,k,deg] of [[L,"left",m.left_deg],[R,"right",m.right_deg]]){
+      const u=(Number(deg)||0)*DEG,p=A.side(s,k,u),x=i&&i[k];
+      side(Sx,p,u);
+      Sx.t1.textContent=ail(u);
+      Sx.t2.textContent=x?(x.kt!=null?x.kt:0)+" kt at "+(Number(x.alpha_deg)||0).toFixed(1)+"°"+(p.stalled>0?", stalled "+Math.round(p.stalled*100)+"%":""):"no air reading";
+    }
+    drawWheel(m,indiff);
+  }
+  let last=0;
+  function streaks(now){
+    const dt=Math.min(.05,(now-(last||now))/1000);last=now;
+    if(!$("rstage").classList.contains("hide"))for(const Sx of [L,R])Sx.lines.forEach((l,i)=>{const o=Sx.offs[i];o.x-=Sx.v*dt*16;if(o.x<-200)o.x+=380;
+      const n=Math.min(60,Sx.v*2);l.setAttribute("x1",o.x);l.setAttribute("x2",o.x+n);l.setAttribute("y1",o.y);l.setAttribute("y2",o.y);
+      l.setAttribute("opacity",(Math.min(1,Sx.v/22)*(1-.6*Sx.stalled)).toFixed(2));});
+    requestAnimationFrame(streaks);
+  }
+  requestAnimationFrame(streaks);
+  return {draw};
+})();
+function drawRollFigs(){RL.draw();}
+if(S)render();
+</script>
+</body>
+</html>

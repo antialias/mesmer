@@ -1,0 +1,65 @@
+name: Bug report
+description: Something the plugin does wrong, or a status you can't clear.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If the yoke behaved unsafely, put **safety** in the title.
+        Please check [troubleshooting](https://github.com/antialias/mesmer/blob/main/docs/troubleshooting.md) first.
+        Leave out serial numbers, licence keys and sign-ins.
+  - type: input
+    id: status
+    attributes:
+      label: The plugin's status line
+      description: Exactly as shown in the corner of X-Plane or at the top of Plugins > Yoke (Brunner).
+      placeholder: "Yoke fault - Retry"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what the yoke and X-Plane did, and what you expected.
+    validations:
+      required: true
+  - type: dropdown
+    id: force_feel
+    attributes:
+      label: Was force feel on?
+      options: ["No", "Yes", "Not sure"]
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: The plugin's lines from Log.txt
+      description: |
+        Copy `X-Plane 12\Log.txt` before restarting X-Plane (it is overwritten), then paste every line containing `[BrunnerDirect]`.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Mesmer version
+      placeholder: 0.1.0-alpha.1
+    validations:
+      required: true
+  - type: input
+    id: setup
+    attributes:
+      label: X-Plane version and aircraft
+      placeholder: X-Plane 12.x, Cessna 172 SP
+    validations:
+      required: true
+  - type: input
+    id: yoke
+    attributes:
+      label: Yoke model and controller firmware
+      placeholder: CLS-E (original), firmware v367
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots of the feel page or the feel card help with force feel problems.

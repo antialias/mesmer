@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/antialias/mesmer/discussions/categories/q-a
+    about: Ask how something works, or how to set something up.
+  - name: Other Brunner hardware
+    url: https://github.com/antialias/mesmer/discussions/categories/other-brunner-hardware
+    about: The CLS-E NG, Mk II, dual yokes, pedals and the rest of the range.
+  - name: Troubleshooting guide
+    url: https://github.com/antialias/mesmer/blob/main/docs/troubleshooting.md
+    about: Every status the plugin shows, and what to do about it.

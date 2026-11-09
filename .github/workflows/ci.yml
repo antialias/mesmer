@@ -1,0 +1,85 @@
+# Every push and pull request: the plugin's core tests on Linux and macOS, and
+# the full Windows build (the plugin itself is Windows-only) with its tests.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The same pin as release.yml; the publish checks both.
+  XPLANE_SDK_URL: https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK430.zip
+  XPLANE_SDK_SHA256: b9875ab27b593927b4f9b3e0ddfffe7401ee5dce6d86b50aea0da65f70ff7816
+
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build
+        run: |
+          cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel --target brunner_core_test brunner_monitor_test brunner_hud_test brunner_yoke_test brunner_workbench_test
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download and verify the X-Plane SDK
+        run: |
+          $zip=Join-Path $env:RUNNER_TEMP 'xplane-sdk.zip'
+          Invoke-WebRequest -Uri $env:XPLANE_SDK_URL -OutFile $zip
+          $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne $env:XPLANE_SDK_SHA256) {throw "X-Plane SDK checksum $hash does not match the pin"}
+          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'xplane-sdk')
+          "XPLANE_SDK=$(Join-Path $env:RUNNER_TEMP 'xplane-sdk\SDK')" >> $env:GITHUB_ENV
+      - name: Build
+        run: |
+          cmake -S src -B build -G "Visual Studio 17 2022" -A x64 "-DXPLANE_SDK=$env:XPLANE_SDK"
+          if ($LASTEXITCODE) {exit $LASTEXITCODE}
+          cmake --build build --config Release
+          if ($LASTEXITCODE) {exit $LASTEXITCODE}
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  # The installer against a fake X-Plane folder and a fake release zip (no network).
+  # The README runs it with Windows PowerShell 5.1, so it must also parse there.
+  installer:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test install.ps1
+        shell: pwsh
+        run: pwsh -NoProfile -File tests/test-install.ps1
+      - name: install.ps1 parses in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path install.ps1),[ref]$null,[ref]$errors)
+          if ($errors) {$errors | Format-List; exit 1}

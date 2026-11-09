@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>Aileron model</title>
+<style>
+:root{--page:#15181c;--panel:#1d2228;--line:#2c333b;--text:#e8ebee;--muted:#8b949e;--amber:#f2a93b;--blue:#58a6ff;--weight:#c9d0d6;--red:#e5484d;--green:#3fb950;--float:#3fb950;--right:#d2a8ff}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+body{background:var(--page);color:var(--text);font:20px/1.35 -apple-system,"Segoe UI",Inter,sans-serif;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:1px solid var(--line);border-radius:10px;padding:0 16px;min-height:44px;cursor:pointer;touch-action:manipulation}
+button.on{border-color:var(--amber);color:var(--amber)}
+select{font:inherit;color:inherit;background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238b949e' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;border:1px solid var(--line);border-radius:10px;padding:0 36px 0 12px;height:44px;max-width:100%;-webkit-appearance:none;appearance:none}
+#top{display:flex;align-items:baseline;gap:20px;padding:12px 24px;border-bottom:1px solid var(--line)}
+#top h1{margin:0;font-size:28px;font-weight:600}
+.cap{color:var(--muted);font-size:17px}
+main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;padding:16px 24px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 18px;min-width:0}
+h2{margin:0 0 4px;font-size:22px;font-weight:600}
+h3{margin:12px 0 2px;font-size:17px;font-weight:500;color:var(--muted)}
+svg{display:block;width:100%;height:auto}
+svg text{font:16px -apple-system,"Segoe UI",Inter,sans-serif;fill:var(--muted)}
+.read{display:grid;grid-template-columns:auto 1fr;gap:2px 16px;margin-top:8px}
+.read b{font-weight:500;color:var(--text);text-align:right}
+.read span{color:var(--muted)}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px}
+.ctl .c{min-width:0}
+.ctl .h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.ctl label{color:var(--muted)}
+.ctl output{text-align:right;white-space:nowrap}
+input[type=range]{display:block;width:100%;min-width:0;height:40px;margin:0;accent-color:var(--amber);touch-action:pan-y}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:17px;color:var(--muted);margin-top:2px}
+.legend i{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.told{display:grid;grid-template-columns:auto 1fr;gap:2px 16px}
+.told b{font-weight:500;text-align:right}
+.told span{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:6px 0 10px}
+table{border-collapse:collapse;width:100%;margin-top:8px;font-size:17px}
+th,td{text-align:right;padding:4px 8px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500}
+td:first-child,th:first-child{text-align:left}
+#notes{grid-column:1/-1;color:var(--muted);font-size:16px}
+#notes p{margin:4px 0}
+.hand{cursor:grab;touch-action:none}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+#stage{display:flex;flex-direction:column;gap:16px}
+#live{display:none}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+@media (max-width:600px){
+  main{display:flex;flex-direction:column;gap:12px;padding:0 12px 12px}
+  .col{display:contents}
+  #top{flex-wrap:wrap;gap:4px 12px;padding:8px 12px}#top h1{font-size:22px}#top .cap{font-size:14px}
+  /* The drawing stays in view while the controls and charts scroll under it. */
+  #stage{position:sticky;top:0;z-index:5;gap:0;margin:0 -12px;padding:4px 12px 6px;background:var(--page);box-shadow:0 10px 14px -10px #000}
+  #stage section{border:0;background:none;padding:0}
+  #stage h2,#stage .legend,#handcap,#stage .dup{display:none}
+  #stage svg text{font-size:26px}
+  .stopl{display:none}
+  #live{display:block;font-size:16px;color:var(--text);line-height:1.3}
+  #hold{min-height:40px;padding:0 12px;white-space:nowrap;font-size:17px}
+  section{padding:10px 12px}
+  .ctl{grid-template-columns:1fr}
+  svg text{font-size:24px}
+  table{font-size:15px}
+}
+/* A phone on its side: the drawing stays put on the left, everything else scrolls on the right. */
+@media (max-height:500px) and (orientation:landscape){
+  main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 12px;padding:0 12px 12px;align-items:start}
+  .col{display:contents}
+  main>section,.col>section,main>#notes{grid-column:2}
+  #top{padding:6px 12px}#top h1{font-size:22px}#top .cap{display:none}
+  #stage{grid-column:1;grid-row:1/span 12;position:sticky;top:0;gap:0;max-height:100vh;overflow:hidden}
+  #stage section{border:0;background:none;padding:4px 0}
+  #stage h2,#stage .legend,#handcap,#stage .dup,.stopl{display:none}
+  #stage svg text{font-size:26px}
+  #live{display:block;font-size:15px;color:var(--text);line-height:1.3}
+  #hold{min-height:40px;padding:0 12px;white-space:nowrap;font-size:16px}
+  section{padding:10px 12px}
+  .ctl{grid-template-columns:1fr}
+  svg text{font-size:24px}
+  table{font-size:15px}
+}
+</style>
+</head>
+<body>
+<div id="top"><h1>Aileron model</h1><span class="cap">Cessna 172: each aileron's weight and the air on it, about its hinge, through the linkage, felt at the wheel</span></div>
+<main>
+  <div class="col">
+   <div id="stage">
+    <section>
+      <h2>Both ailerons, each seen from its own wingtip</h2>
+      <svg id="wings" viewBox="0 0 800 300" aria-label="Left and right aileron sections"></svg>
+      <div class="legend"><span><i style="background:var(--weight)"></i>Weight</span><span><i style="background:var(--blue)"></i>Air on the deflection</span><span><i style="background:var(--float)"></i>Float with angle of attack</span><span><i style="background:var(--amber)"></i>Net turn about the hinge</span><span><i style="background:var(--red)"></i>Stalled</span></div>
+    </section>
+    <section>
+      <h2>Wheel</h2>
+      <svg id="wheel" viewBox="0 0 800 270" aria-label="Control wheel, from the pilot's seat"></svg>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:6px">
+        <button id="hold">Let go</button>
+        <span class="cap" id="handcap">Drag the wheel to turn it; let go to see what the ailerons do.</span>
+        <span id="live"></span>
+      </div>
+    </section>
+   </div>
+    <section>
+      <h2>Conditions</h2>
+      <div class="presets" id="presets"></div>
+      <div class="cap" style="margin-bottom:8px">Airspeed, power, roll rate, sideslip and the gust stand in for what X-Plane reports over each wing's panels. In the aircraft the plugin reads each panel's air, angle and stall from X-Plane and makes none of it up.</div>
+      <div class="ctl" id="ctl"></div>
+      <h3>Per side, as X-Plane would report it</h3>
+      <div class="ctl" id="ctl2"></div>
+      <h3>Figures</h3>
+      <div class="ctl" id="ctl3"></div>
+    </section>
+  </div>
+  <div class="col">
+    <section>
+      <h2>Force at the wheel's rim, across its travel</h2>
+      <svg id="force" viewBox="0 0 640 300" aria-label="Rim force against wheel angle"></svg>
+      <div class="legend"><span><i style="background:var(--blue)"></i>Left aileron</span><span><i style="background:var(--right)"></i>Right aileron</span><span><i style="background:var(--weight)"></i>Weights</span><span><i style="background:var(--amber)"></i>Total</span></div>
+      <div class="cap">Above the line the wheel is turned right; below, left. It rests where the total crosses zero.</div>
+    </section>
+    <section>
+      <h2>Where it rests, by airspeed</h2>
+      <svg id="restv" viewBox="0 0 640 220" aria-label="Resting wheel angle against airspeed"></svg>
+      <div class="cap" id="restcap"></div>
+    </section>
+    <section>
+      <h2>Where it rests, by the angle difference between the wings</h2>
+      <svg id="resta" viewBox="0 0 640 220" aria-label="Resting wheel angle against left minus right angle of attack"></svg>
+      <div class="cap" id="restacap"></div>
+    </section>
+    <section>
+      <h2>Now</h2>
+      <div class="read" id="read"></div>
+    </section>
+    <section>
+      <h2>What the yoke would be told</h2>
+      <div class="row">
+        <span class="cap">Below the drive's 20 % floor:</span>
+        <button id="ruleF" class="on">Force-exact</button><button id="ruleR">Rest-exact</button>
+        <span class="cap" id="ceiling"></span>
+      </div>
+      <div class="told" id="told"></div>
+      <div class="cap" id="rulecap" style="margin-top:6px"></div>
+      <div class="cap">Roll's drive has no constant-force register in the plugin's bounds, so it is told a spring and a centre only. Drive units from CLS2Sim's 0.001 N·m per unit and 0.006646° per count, inferred, not measured.</div>
+    </section>
+  </div>
+  <section id="notes">
+    <p><b style="color:var(--text);font-weight:500">Figures and how sure they are.</b>
+    Aileron area 9.15 ft² each, from 18.30 ft² total (Jane's 1977–78, as recalled, to be checked against a copy); chord aft of the hinge 11 in (guessed from a 64 in wing chord and a Frise hinge set back).
+    Hinge slope Ch<sub>δ</sub> 0.30 per radian and float slope Ch<sub>α</sub> 0.15 per radian: a Frise aileron's range in NACA Report 868 and TR 721, not a 172's (guessed).
+    Travel 20° up, 15° down (Cessna 172 Service Manual, as commonly quoted, not yet checked against a copy); the linkage is a parabola through neutral and both stops, so the gearing is equal both ways at neutral and the differential grows away from it (a model of a differential bellcrank, not Cessna's drawing).
+    Wheel travel 86° each way: the Brunner's own, from its soft limits and CLS2Sim's degrees per count; the 172's is a Service Manual figure (guessed). Grip radius 0.15 m (to be measured with a ruler).
+    Weight moment 0 in·lb: the 172's ailerons carry balance weights (POH Section 7, as recalled); Cessna's balance limits are in SESRM 51-60-00 Table 1.
+    Stalled share kept 40 %: no published post-stall hinge data; a guess for the owner to tune. Angles are clamped to ±30° and a panel with under 2.5 Pa of air says nothing (noise seen parked). Air from behind (an angle beyond ±90°) turns the deflection's moment over, so the aileron runs to a stop (decision 17, the owner, 2026-11-09; k<sub>rev</sub> 1.0, guessed); the plugin does not do this yet.
+    Prop wash over the ailerons 5 m/s at full power parked: they sit outside most of the slipstream (guessed). Inertia 0.10 kg·m² per aileron and 0.01 kg·m² for the wheel, damping ratio 0.4: rough.
+    Roll rate and sideslip become per-wing angles here as p·y/V (y 4.3 m) and β times 1.73° of dihedral; in the aircraft X-Plane reports the angles and the plugin reads them.</p>
+  </section>
+</main>
+<script id="model">
+// The two ailerons about their hinges, linked to the wheel. Each aileron's
+// angle is trailing edge up positive; the wheel's angle is right positive.
+// Kept free of the page so the feel page can reuse it; aileron_vectors.json
+// pins its numbers for the plugin's C++ copy.
+const Aileron=(()=>{
+  const INLB=0.112985,KT=0.514444,RHO=1.225,DEG=Math.PI/180,LBF=4.44822;
+  const P={area:0.85,chord:0.28,chd:0.30,cha:0.15,up:20*DEG,down:15*DEG,wheel:86*DEG,rim:0.15,
+    keep:0.4,inertia:0.10,wheelInertia:0.010,zeta:0.4,wash:5,alphaClamp:30*DEG,minPa:2.5,kRev:1.0};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  // Air over the ailerons, Pa: airspeed plus a little prop wash (they sit outside most of the slipstream).
+  const wingQ=(kt,throttle)=>{const v=kt*KT,w=P.wash*throttle*Math.max(0,1-v/80);return .5*RHO*(v*v+w*w);};
+  // The linkage: a parabola u = a*phi + b*phi^2 through neutral and both stops,
+  // phi the aileron's own command (right: +wheel, left: -wheel). Equal rates at
+  // neutral, more going up, less going down.
+  const A=()=>(P.up+P.down)/(2*P.wheel),B=()=>(P.up-P.down)/(2*P.wheel*P.wheel);
+  const angles=t=>{const a=A(),b=B();return {left:-a*t+b*t*t,right:a*t+b*t*t,dLeft:-a+2*b*t,dRight:a+2*b*t};};
+  // One aileron's moment about its hinge, N·m, trailing edge up positive. s[k]
+  // is that side as X-Plane reports it: {q Pa, alpha rad, stalled 0..1}. The
+  // coefficients and the weight are the profile's figures, carried in s so
+  // the page can turn them. A stalled panel keeps s.keep of both slopes.
+  // Air from behind (beyond ±90° with air over the gate; decision 17, the
+  // owner, 2026-11-09): the deflection's moment turns over, s.kRev of it (P's
+  // when missing), so the aileron runs away from neutral to a stop, and the
+  // float takes the angle against the reversed stream. It turns over smoothly,
+  // never across a hair's width: within the angle clamp the deflection's
+  // moment is whole; past it, cos(alpha)/cos(clamp) of it, held to ±1, its
+  // reversed half times kRev, so 0 with the air across the aileron (±90°) and
+  // -kRev from ±150°. reversed reports the air mostly from behind; nothing in
+  // the moment steps on it; over the gate its departure from 1 fades in with
+  // q, none at minPa to all at twice it. The plugin's C++ copy (aileron.hpp)
+  // has it too, with k_rev the profile's figure.
+  const turnOf=(a,kRev,q)=>{if (Math.abs(a)<=P.alphaClamp) return 1;const c=clamp(Math.cos(a)/Math.cos(P.alphaClamp),-1,1),turn=c>=0?c:kRev*c,share=clamp((q-P.minPa)/P.minPa,0,1);
+    return share>=1?turn:1+(turn-1)*share;};
+  const side=(s,k,u)=>{
+    const p=s[k],q=p.q>=P.minPa?p.q:0,f=clamp(p.stalled,0,1),eff=1-(1-s.keep)*f;
+    const reversed=q>0&&Math.abs(p.alpha)>Math.PI/2,kRev=Number.isFinite(s.kRev)?s.kRev:P.kRev,turn=q>0?turnOf(p.alpha,kRev,q):1;
+    const alpha=clamp(reversed?(p.alpha>0?Math.PI-p.alpha:-Math.PI-p.alpha):p.alpha,-P.alphaClamp,P.alphaClamp),qsc=q*P.area*P.chord;
+    const air=-qsc*s.chd*turn*eff*u,float_=qsc*s.cha*eff*alpha,weight=-s.unbalance*INLB*Math.cos(u);
+    return {air,float:float_,weight,net:air+float_+weight,q,alpha,eff,stalled:f,reversed,turn};
+  };
+  // The wheel's torque, N·m right positive, by virtual work through the linkage.
+  const torques=(s,t)=>{
+    const g=angles(t),L=side(s,'left',g.left),R=side(s,'right',g.right);
+    const left=(L.air+L.float)*g.dLeft,right=(R.air+R.float)*g.dRight,weight=L.weight*g.dLeft+R.weight*g.dRight;
+    return {left,right,weight,total:left+right+weight,L,R,g};
+  };
+  const torque=(s,t)=>torques(s,t).total;
+  const rimLb=T=>T/P.rim/LBF;                 // N·m at the wheel -> lb at the grip
+  const airless=s=>!(s.left.q>=P.minPa||s.right.q>=P.minPa);
+  const indifferent=s=>airless(s)&&Math.abs(s.unbalance)<1e-12; // zero torque everywhere: it rests where it is left
+  // Where the torque is zero, friction aside; a stop when one sign wins
+  // everywhere. Pushed outward at both stops (air from behind, or a negative
+  // float slope) the wheel is bistable: from where it is (from, rad) it is
+  // followed, in quarter degrees, the way the torque turns it, to a stop or
+  // to a balance it meets first (then bisected), so a wheel at a stop stays
+  // there while that stop pushes outward, however hard the other pushes.
+  // With no wheel given, or no torque where it is, the harder-pushed stop, 0
+  // on a tie.
+  const rest=(s,from)=>{
+    if (indifferent(s)) return 0;
+    const w=P.wheel;let lo=-w,hi=w;
+    const tlo=torque(s,lo),thi=torque(s,hi);
+    if (tlo<0&&thi>0) {
+      const sign=t=>{const n=torque(s,t);return n>0?1:n<0?-1:0;};
+      let t=Number.isFinite(from)?clamp(from,-w,w):0;const way=Number.isFinite(from)?sign(t):0;
+      if (way===0) return -tlo>thi?-w:thi>-tlo?w:0;
+      for (;;) {
+        const e=clamp(t+way*0.25*DEG,-w,w);
+        if (e===t) return t;
+        if (sign(e)!==way) {let a=t,b=e;for (let i=0;i<60;i++) {const m=(a+b)/2;if (sign(m)===way) a=m;else b=m;}return (a+b)/2;}
+        t=e;
+      }
+    }
+    if (tlo<0) return -w;if (thi>0) return w;
+    for (let i=0;i<60;i++) {const m=(lo+hi)/2;if (torque(s,m)>0) lo=m;else hi=m;}
+    return (lo+hi)/2;
+  };
+  // One step of the free wheel: the ailerons' inertia through the linkage plus the wheel's, air damping, friction, stops.
+  const step=(st,s,dt)=>{
+    const T=torques(s,st.t),g=T.g;
+    const I=P.wheelInertia+P.inertia*(g.dLeft*g.dLeft+g.dRight*g.dRight);
+    const K=Math.max(0,(torque(s,st.t-.01)-torque(s,st.t+.01))/.02);
+    const damping=2*P.zeta*Math.sqrt(I*K)+0.002;
+    const friction=s.friction*LBF*P.rim;    // lb at the rim -> N·m at the wheel
+    let tq=T.total-damping*st.w;
+    if (Math.abs(st.w)<1e-4) {
+      if (Math.abs(T.total)<=friction) {st.w=0;return;}
+      tq-=Math.sign(T.total)*friction;
+    } else tq-=Math.sign(st.w)*friction;
+    const w0=st.w;st.w+=tq/I*dt;
+    if (w0!==0 && Math.sign(st.w)!==Math.sign(w0) && Math.abs(T.total)<=friction) st.w=0;
+    st.t+=st.w*dt;
+    if (st.t>P.wheel) {st.t=P.wheel;if (st.w>0) st.w=0;}
+    if (st.t<-P.wheel) {st.t=-P.wheel;if (st.w<0) st.w=0;}
+  };
+  // Wheel angle <-> the roll drive's counts: 13000 at either stop, right positive (the sign is untested on the drive).
+  const TRAVEL=13000,UNIT=1000/13000/100,SECANT=60,SOFTEST=20,PROTECT=4500;
+  const exact=t=>clamp(t/P.wheel,-1,1)*TRAVEL;
+  const counts=t=>Math.round(exact(t));
+  const angle=c=>clamp(c,-TRAVEL,TRAVEL)/TRAVEL*P.wheel;
+  const lround=v=>Math.sign(v)*Math.round(Math.abs(v));
+  // tuning.hpp's worst_force_units and drive_ceiling (decision 16): the
+  // drive's line F(x) = held - k*(x - centre), k = strength*10/travel units per
+  // count, is worst at the stop farther from its zero; the ceiling is the
+  // strongest whole percent, 400 down to 21, whose line from line(s) =
+  // [centre, held] stays within 4000 units over the travel, else 20.
+  const MARGIN=4000,UNITS_PER_PERCENT=10,STRONGEST=MARGIN/UNITS_PER_PERCENT;
+  const worstForce=(strength,centre,held,travel)=>{
+    const k=strength*UNITS_PER_PERCENT/travel;
+    return Math.max(Math.abs(held-k*(travel-centre)),Math.abs(held-k*(-travel-centre)));
+  };
+  const driveCeiling=(travel,line)=>{
+    for (let s=STRONGEST;s>SOFTEST;s--) {const [centre,held]=line(s);if (worstForce(s,centre,held,travel)<=MARGIN) return s;}
+    return SOFTEST;
+  };
+  // What the drive is told for the wheel at x0 counts, solve_pitch's way: the
+  // strength is the secant from the rest to x0 (at least 60 counts), held to
+  // 20..the drive's ceiling (no firmest setting: the strongest spring whose
+  // line, with the centre it would be sent with, stays within the margin over
+  // the whole travel); the centre is the rest reached from x0. Below 20 % (floored) one of two rules:
+  // rest-exact keeps the centre on the rest and the wheel is firmer than the
+  // model; force-exact puts the centre where the 20 % spring gives the model's
+  // torque at x0, so with no air the centre is the wheel itself. Above the
+  // ceiling (saturated) the rest stays exact and the torque is lighter.
+  const solve=(s,x0,unitsPerNm,forceExact)=>{
+    const u=clamp(unitsPerNm,1,1e6);
+    const r=rest(s,Number.isFinite(x0)?angle(x0):NaN),restCounts=exact(r),atStop=Math.abs(restCounts)>=TRAVEL-0.5;
+    const anchorNm=atStop?torque(s,r):0;
+    const x=Number.isFinite(x0)?clamp(x0,-TRAVEL,TRAVEL):restCounts;
+    let dx=x-restCounts;
+    if (Math.abs(dx)<SECANT) {
+      const side_=dx>0?1:dx<0?-1:(restCounts>0?-1:1);
+      dx=side_*SECANT;
+      if (Math.abs(restCounts+dx)>TRAVEL) dx=-dx;
+    }
+    const slope=(anchorNm-torque(s,angle(restCounts+dx)))/dx; // N·m per count, restoring positive
+    const want=slope*u/UNIT;
+    const ceiling=driveCeiling(TRAVEL,strength=>[lround(clamp(restCounts+anchorNm*u/(strength*UNIT),-TRAVEL,TRAVEL)),0]);
+    const saturated=want>ceiling+1e-9,floored=want<SOFTEST-0.5;
+    const strength=clamp(lround(clamp(want,SOFTEST,ceiling)),SOFTEST,ceiling),ks=strength*UNIT;
+    const modelNm=torque(s,angle(x));
+    let c=floored&&forceExact?x+modelNm*u/ks:restCounts+anchorNm*u/ks;
+    const centreLimited=Math.abs(c)>TRAVEL+0.5;c=clamp(c,-TRAVEL,TRAVEL);
+    const centre=lround(c);
+    return {x,modelNm,restCounts,slopeNmPerCount:slope,want,ceiling,strength,centre,driveNm:-ks*(x-centre)/u,
+      saturated,floored,forceExact:floored&&forceExact,centreLimited,
+      fullWheelNm:strength*TRAVEL*UNIT/u,fullWheelUnits:strength*TRAVEL*UNIT,shrink:slope>0?ks/u/slope:NaN};
+  };
+  return {P,INLB,KT,DEG,LBF,TRAVEL,UNIT,SOFTEST,PROTECT,MARGIN,clamp,wingQ,angles,side,torques,torque,rimLb,airless,indifferent,rest,step,exact,counts,angle,solve};
+})();
+</script>
+<script>
+const M=Aileron,P=M.P,DEG=M.DEG;
+const $=id=>document.getElementById(id);
+const ns='http://www.w3.org/2000/svg';
+const el=(tag,attrs={},parent)=>{const e=document.createElementNS(ns,tag);for (const k in attrs) e.setAttribute(k,attrs[k]);if (parent) parent.appendChild(e);return e;};
+
+// ---- conditions ----
+const C={kt:0,throttle:0,aoa:0,rollRate:0,beta:0,gust:0,stallL:0,stallR:0,dq:0,unbalance:0,friction:.3,chd:.3,cha:.15,keep:.4};
+const lr=(v,unit,pos,neg,n=0)=>Math.abs(v)<1e-9?'none':Math.abs(v).toFixed(n)+unit+' '+(v>0?pos:neg);
+const groups={ctl:[
+  ['kt','Airspeed',0,140,1,v=>v+' kt'],
+  ['throttle','Throttle',0,100,1,v=>v+'%'],
+  ['aoa','Angle of attack',-5,25,0.5,v=>v+'°'],
+  ['rollRate','Roll rate',-60,60,1,v=>lr(v,'°/s','right','left')],
+  ['beta','Sideslip',-20,20,1,v=>lr(v,'°','wind from the right','wind from the left')],
+  ['gust','Gust on the left wing',-10,10,0.5,v=>lr(v,'°','more angle','less angle',1)],
+],ctl2:[
+  ['stallL','Left wing stalled',0,100,5,v=>v+'%'],
+  ['stallR','Right wing stalled',0,100,5,v=>v+'%'],
+  ['dq','Left wing air, against the right',-30,30,1,v=>lr(v,'%','more','less')],
+  ['friction','Control friction',0,30,1,v=>(v/10).toFixed(1)+' lb'],
+],ctl3:[
+  ['unbalance','Weight moment, each aileron',0,20,0.5,v=>v+' in·lb'],
+  ['chd','Hinge slope Chδ',5,60,1,v=>(v/100).toFixed(2)+' /rad'],
+  ['cha','Float slope Chα',-10,40,1,v=>(v/100).toFixed(2)+' /rad'],
+  ['keep','Stalled share kept',0,100,5,v=>v+'%'],
+]};
+const toModel={kt:v=>v,throttle:v=>v/100,aoa:v=>v,rollRate:v=>v,beta:v=>v,gust:v=>v,stallL:v=>v/100,stallR:v=>v/100,dq:v=>v/100,
+  unbalance:v=>v,friction:v=>v/10,chd:v=>v/100,cha:v=>v/100,keep:v=>v/100};
+const sliders={};
+for (const box in groups) for (const [k,label,min,max,step,show] of groups[box]) {
+  const l=document.createElement('label');l.textContent=label;l.htmlFor='s_'+k;
+  const i=document.createElement('input');i.type='range';i.id='s_'+k;i.min=min;i.max=max;i.step=step;
+  const o=document.createElement('output');
+  i.addEventListener('input',()=>{C[k]=toModel[k](+i.value);o.textContent=show(+i.value);moved();});
+  const c=document.createElement('div');c.className='c';const h=document.createElement('div');h.className='h';
+  h.append(l,o);c.append(h,i);$(box).append(c);sliders[k]={i,o,show};
+}
+const setSlider=(k,raw)=>{const s=sliders[k];s.i.value=raw;C[k]=toModel[k](raw);s.o.textContent=s.show(raw);};
+const base={kt:0,throttle:0,aoa:0,rollRate:0,beta:0,gust:0,stallL:0,stallR:0,dq:0};
+const presets=[
+  ['Parked, engine off',{}],
+  ['Taxi',{kt:12,throttle:20,aoa:1}],
+  ['Take-off roll',{kt:55,throttle:100,aoa:2}],
+  ['Cruise',{kt:110,throttle:75,aoa:2}],
+  ['Rolling into a 30° bank',{kt:100,throttle:75,aoa:3,rollRate:30}],
+  ['A steady slip',{kt:70,throttle:40,aoa:6,beta:12}],
+  ['Slow flight',{kt:50,throttle:60,aoa:12}],
+  ['Stall, left wing drops',{kt:45,throttle:20,aoa:17,rollRate:-20,stallL:100,stallR:40}],
+  ['Spin to the left, as per-panel inputs',{kt:60,throttle:10,aoa:25,rollRate:-60,beta:15,stallL:100,stallR:30,dq:-30}],
+  ['A gust on the left wing',{kt:90,throttle:70,aoa:3,gust:5}],
+];
+for (const [name,p] of presets) {
+  const b=document.createElement('button');b.textContent=name;
+  b.onclick=()=>{const all={...base,...p};for (const k in all) setSlider(k,all[k]);moved();};
+  $('presets').append(b);
+}
+for (const k in base) setSlider(k,base[k]);
+setSlider('friction',3);setSlider('unbalance',0);setSlider('chd',30);setSlider('cha',15);setSlider('keep',40);
+
+// What X-Plane would report over each wing's panels, from the conditions.
+// Stand-ins only: the plugin reads the panels and derives none of this.
+const reported=()=>{
+  const V=Math.max(5,C.kt*M.KT),p=C.rollRate*DEG,y=4.3,dihedral=1.73*DEG;
+  const dp=p*y/V,db=C.beta*DEG*dihedral,q=M.wingQ(C.kt,C.throttle);
+  return {left:{q:q*(1+C.dq),alpha:C.aoa*DEG-dp-db+C.gust*DEG,stalled:C.stallL},right:{q,alpha:C.aoa*DEG+dp+db,stalled:C.stallR},
+    unbalance:C.unbalance,friction:C.friction,chd:C.chd,cha:C.cha,keep:C.keep};
+};
+
+// ---- wheel state ----
+const st={t:0,w:0};let held=false,dragging=false,fallStart=null,fallFrom=0,lastFall='';
+const setHeld=h=>{held=h;$('hold').textContent=h?'Let go':'Hold it here';$('hold').classList.toggle('on',h);
+  if (!h) {fallStart=performance.now();fallFrom=st.t;lastFall='';} };
+$('hold').onclick=()=>{setHeld(!held);};
+setHeld(false);
+
+// ---- aileron sections ----
+const W=$('wings');
+const arrow=(color,parent)=>{const g=el('g',{},parent);const l=el('line',{stroke:color,'stroke-width':5,'stroke-linecap':'round'},g);const h=el('path',{fill:color},g);return {g,l,h};};
+const setArrow=(a,x1,y1,x2,y2)=>{
+  const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);a.g.style.display=L<6?'none':'';if (L<6) return;
+  const ux=dx/L,uy=dy/L,hx=x2-ux*16,hy=y2-uy*16;
+  a.l.setAttribute('x1',x1);a.l.setAttribute('y1',y1);a.l.setAttribute('x2',hx);a.l.setAttribute('y2',hy);
+  a.h.setAttribute('d',`M${x2},${y2} L${hx-uy*9},${hy+ux*9} L${hx+uy*9},${hy-ux*9} Z`);
+};
+const len=150;                                              // aileron chord drawn 150 px
+const section=(hx,hy,title)=>{
+  const g=el('g',{},W);
+  const streaks=el('g',{},g);
+  const lines=[];for (let i=0;i<10;i++) lines.push(el('line',{stroke:'#3a4450','stroke-width':2,'stroke-linecap':'round'},streaks));
+  const offs=lines.map((_,i)=>({x:(i*97)%380-190,y:(i*61)%180-90}));
+  // the wing's trailing part, fixed
+  el('path',{d:`M${hx},${hy-16} C${hx+50},${hy-30} ${hx+110},${hy-30} ${hx+140},${hy-6} Q${hx+150},${hy} ${hx+140},${hy+6} C${hx+110},${hy+18} ${hx+50},${hy+16} ${hx},${hy+16} Z`,fill:'#39424d',stroke:'#56606b'},g);
+  el('text',{x:hx+70,y:hy+50,'text-anchor':'middle'},g).textContent=title;
+  const ail=el('g',{},g);
+  el('path',{d:`M0,-16 L${-len},-3 L${-len},3 L0,16 Z`,fill:'#5b6672',stroke:'#7a8591'},ail);
+  const stall=el('path',{d:`M0,-16 L${-len},-3 L${-len},3 L0,16 Z`,fill:'var(--red)',opacity:0},ail);
+  el('circle',{cx:hx,cy:hy,r:7,fill:'#15181c',stroke:'#c9d0d6','stroke-width':2},g);
+  const stop=(a,label,dy)=>{const x=hx-Math.cos(a)*(len+16),y=hy-Math.sin(a)*(len+16);
+    el('line',{x1:hx,y1:hy,x2:x,y2:y,stroke:'#2c333b','stroke-dasharray':'4 6'},g);el('text',{x:x-4,y:y+dy,'text-anchor':'end',class:'stopl'},g).textContent=label;};
+  stop(P.up,'up stop',-8);stop(-P.down,'down stop',20);
+  const wA=arrow('var(--weight)',g),aA=arrow('var(--blue)',g),fA=arrow('var(--float)',g);
+  const arc=el('path',{fill:'none',stroke:'var(--amber)','stroke-width':5,'stroke-linecap':'round'},g),head=el('path',{fill:'var(--amber)'},g);
+  const text=el('text',{x:hx-len-30,y:hy-132,class:'dup'},g),text2=el('text',{x:hx-len-30,y:hy-110,class:'dup'},g);
+  return {hx,hy,streaks,lines,offs,ail,stall,wA,aA,fA,arc,head,text,text2};
+};
+el('text',{x:780,y:26,'text-anchor':'end'},W).textContent='nose this way →';
+const secL=section(240,170,'Left wing'),secR=section(630,170,'Right wing');
+// Arrow length grows with the square root of the moment, so taxi and cruise both read: 0.5 N·m -> 40 px, capped.
+const px=nm=>Math.sign(nm)*Math.min(110,40*Math.sqrt(Math.abs(nm)/.5));
+function drawSection(S,p,u,dt) {
+  const {hx,hy}=S;
+  S.ail.setAttribute('transform',`translate(${hx},${hy}) rotate(${u/DEG})`);
+  S.stall.setAttribute('opacity',(p.stalled*.55).toFixed(2));
+  // flow comes from the nose at the panel's angle of attack: up from below for a positive angle
+  const v=Math.sqrt(2*p.q/1.225);
+  S.streaks.setAttribute('transform',`translate(${hx-40},${hy}) rotate(${p.alpha/DEG})`);
+  S.lines.forEach((l,i)=>{const o=S.offs[i];o.x-=v*dt*16;if (o.x<-200) o.x+=380;
+    const L=Math.min(60,v*2);l.setAttribute('x1',o.x);l.setAttribute('x2',o.x+L);l.setAttribute('y1',o.y);l.setAttribute('y2',o.y);
+    l.setAttribute('opacity',(Math.min(1,v/22)*(1-.6*p.stalled)).toFixed(2));});
+  // arrows: weight at 40 % chord, straight down; air and float normal to the chord
+  const c=Math.cos(u),s=Math.sin(u);                        // chord points left and, for u>0, up
+  const at=f=>[hx-c*len*f,hy-s*len*f];
+  const [wx,wy]=at(.35);setArrow(S.wA,wx,wy,wx,wy-px(p.weight));
+  const nx=-s,ny=c;                                         // normal to the chord, pointing down on screen at u=0
+  const [ax,ay]=at(.5),aL=-px(p.air);                      // a positive moment lifts the trailing edge: the arrow points up
+  setArrow(S.aA,ax,ay,ax+nx*aL,ay+ny*aL);
+  const [fx,fy]=at(.75),fL=-px(p.float);
+  setArrow(S.fA,fx,fy,fx+nx*fL,fy+ny*fL);
+  const mag=Math.min(1.6,Math.abs(px(p.net))/70),r=44;
+  if (Math.abs(p.net)<0.003||mag<.04) {S.arc.setAttribute('d','');S.head.setAttribute('d','');}
+  else {
+    const a0=Math.PI*1.15,sg=p.net>0?1:-1,a1=a0+sg*mag*2.2;  // clockwise on screen lifts the trailing edge
+    const pt=a=>[hx+r*Math.cos(a),hy+r*Math.sin(a)];
+    const [x0,y0]=pt(a0),[x1,y1]=pt(a1);
+    S.arc.setAttribute('d',`M${x0},${y0} A${r},${r} 0 ${mag*2.2>Math.PI?1:0} ${sg>0?1:0} ${x1},${y1}`);
+    const tx=-Math.sin(a1)*sg,ty=Math.cos(a1)*sg;
+    S.head.setAttribute('d',`M${x1+tx*14},${y1+ty*14} L${x1-ty*9},${y1+tx*9} L${x1+ty*9},${y1-tx*9} Z`);
+  }
+  S.text.textContent=`${Math.abs(u/DEG)<.05?'neutral':Math.abs(u/DEG).toFixed(1)+'° '+(u>0?'up':'down')}`;
+  S.text2.textContent=`${(v/M.KT).toFixed(0)} kt at ${(p.alpha/DEG).toFixed(1)}°${p.stalled>0?', stalled '+(p.stalled*100).toFixed(0)+'%':''}`;
+}
+
+// ---- wheel drawing ----
+const Y=$('wheel');
+const hub={x:400,y:150},R=118;                              // grip centre drawn 118 px from the shaft
+el('circle',{cx:hub.x,cy:hub.y,r:R+22,fill:'none',stroke:'#2c333b','stroke-dasharray':'3 8'},Y);
+const tick=(a,label,anchor)=>{const x=hub.x+Math.sin(a)*(R+22),y=hub.y-Math.cos(a)*(R+22);
+  el('line',{x1:hub.x+Math.sin(a)*(R+12),y1:hub.y-Math.cos(a)*(R+12),x2:x,y2:y,stroke:'#56606b','stroke-width':2},Y);
+  const inside=a===0;el('text',{x:x+Math.sin(a)*12,y:inside?y+30:y-Math.cos(a)*12+6,'text-anchor':anchor},Y).textContent=label;};
+tick(-P.wheel,'left stop','end');tick(P.wheel,'right stop','start');tick(0,'level','middle');
+const wheelG=el('g',{class:'hand'},Y);
+el('path',{d:`M-26,24 C-120,46 -162,-30 -140,-96 C-130,-124 -100,-124 -94,-96 L-78,-30 C-66,6 -30,14 0,14 C30,14 66,6 78,-30 L94,-96 C100,-124 130,-124 140,-96 C162,-30 120,46 26,24 Z`,fill:'#c9d0d6',stroke:'#e8ebee','stroke-width':2},wheelG);
+el('circle',{cx:0,cy:0,r:30,fill:'#39424d',stroke:'#7a8591','stroke-width':3},wheelG);
+el('circle',{cx:0,cy:-14,r:4,fill:'var(--amber)'},wheelG);
+el('circle',{cx:0,cy:0,r:R+26,fill:'transparent'},wheelG);
+// Drawn over the wheel, so they let a finger through to it.
+const wArc=el('path',{fill:'none',stroke:'var(--amber)','stroke-width':6,'stroke-linecap':'round','pointer-events':'none'},Y),wHead=el('path',{fill:'var(--amber)','pointer-events':'none'},Y);
+const wText=el('text',{x:20,y:26,class:'dup','pointer-events':'none'},Y),wText2=el('text',{x:20,y:256,class:'dup','pointer-events':'none'},Y);
+const pointerAngle=e=>{const r=Y.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*800,y=(e.clientY-r.top)/r.height*270;return Math.atan2(x-hub.x,-(y-hub.y));};
+let grab0=0,t0=0;
+wheelG.addEventListener('pointerdown',e=>{dragging=true;wheelG.setPointerCapture(e.pointerId);grab0=pointerAngle(e);t0=st.t;st.w=0;});
+wheelG.addEventListener('pointermove',e=>{if (!dragging) return;let d=pointerAngle(e)-grab0;d=Math.atan2(Math.sin(d),Math.cos(d));st.t=M.clamp(t0+d,-P.wheel,P.wheel);st.w=0;});
+const release=()=>{if (!dragging) return;dragging=false;if (!held) {fallStart=performance.now();fallFrom=st.t;lastFall='';}};
+wheelG.addEventListener('pointerup',release);wheelG.addEventListener('pointercancel',release);
+// touch-action on an SVG group isn't honoured: without this a finger turning
+// the wheel becomes a page scroll and the drag is cancelled part way.
+wheelG.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+
+// ---- charts ----
+const chart=(svg,w,h,pad)=>({svg,w,h,pad,g:el('g',{},svg)});
+const F=chart($('force'),640,300,{l:70,r:12,t:12,b:40});
+const RV=chart($('restv'),640,220,{l:76,r:16,t:12,b:40});
+const RA=chart($('resta'),640,220,{l:76,r:16,t:12,b:40});
+const path=pts=>pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join('');
+const wdeg=P.wheel/DEG;
+function drawForce(s) {
+  const {pad,w,h}=F;F.g.innerHTML='';
+  const N=80,xs=[...Array(N+1)].map((_,i)=>-P.wheel+2*P.wheel*i/N);
+  const data=xs.map(t=>{const T=M.torques(s,t);return [t/DEG,M.rimLb(T.left),M.rimLb(T.right),M.rimLb(T.weight),M.rimLb(T.total)];});
+  const top=Math.max(.5,...data.map(d=>Math.max(Math.abs(d[1]),Math.abs(d[2]),Math.abs(d[3]),Math.abs(d[4]))));
+  const span=top<2?Math.ceil(top*4)/4:Math.ceil(top/2)*2;
+  const X=d=>pad.l+(d+wdeg)/(2*wdeg)*(w-pad.l-pad.r),Yv=v=>pad.t+(span-v)/(2*span)*(h-pad.t-pad.b);
+  for (const v of [-span,-span/2,0,span/2,span]) {
+    el('line',{x1:pad.l,x2:w-pad.r,y1:Yv(v),y2:Yv(v),stroke:v===0?'#56606b':'#2c333b'},F.g);
+    el('text',{x:pad.l-8,y:Yv(v)+5,'text-anchor':'end'},F.g).textContent=v===span?v+' lb':String(Number(v.toFixed(2)));
+  }
+  for (const [d,t,a] of [[-wdeg,'left stop','start'],[0,'level','middle'],[wdeg,'right stop','end']]) {
+    el('line',{x1:X(d),x2:X(d),y1:pad.t,y2:h-pad.b,stroke:'#2c333b'},F.g);
+    el('text',{x:X(d),y:h-12,'text-anchor':a},F.g).textContent=t;
+  }
+  const line=(k,c)=>el('path',{d:path(data.map(d=>[X(d[0]),Yv(d[k])])),fill:'none',stroke:c,'stroke-width':k===4?4:3},F.g);
+  line(3,'var(--weight)');line(1,'var(--blue)');line(2,'var(--right)');line(4,'var(--amber)');
+  if (!M.indifferent(s)) {const r=M.rest(s,st.t);el('circle',{cx:X(r/DEG),cy:Yv(M.rimLb(M.torque(s,r))),r:8,fill:'none',stroke:'var(--amber)','stroke-width':3},F.g);}
+  F.dot=el('circle',{r:9,fill:'var(--text)'},F.g);F.X=X;F.Y=Yv;
+}
+// The rest axis spans the rests it shows (at least ±10°), up to the stops.
+const restSpan=degs=>{const m=Math.max(10,...degs.map(Math.abs))*1.15;return m>=wdeg?wdeg:Math.ceil(m/5)*5;};
+const restAxes=(Ch,span)=>{
+  const {pad,w,h}=Ch;Ch.g.innerHTML='';
+  const Yp=d=>pad.t+(span-d)/(2*span)*(h-pad.t-pad.b);
+  const edge=span>=wdeg?' stop':'°';
+  for (const [d,t] of [[span,span.toFixed(0)+edge+' right'],[0,'level'],[-span,span.toFixed(0)+edge+' left']]) {
+    el('line',{x1:pad.l,x2:w-pad.r,y1:Yp(d),y2:Yp(d),stroke:d===0?'#56606b':'#2c333b'},Ch.g);
+    el('text',{x:pad.l-8,y:Yp(d)+5,'text-anchor':'end','font-size':14},Ch.g).textContent=t;
+  }
+  return Yp;
+};
+function drawRestV(s) {
+  const {pad,w,h}=RV;
+  const X=kt=>pad.l+kt/140*(w-pad.l-pad.r);
+  const rests=[];let first=null;
+  for (let kt=0;kt<=140;kt++) {
+    const q=M.wingQ(kt,C.throttle),s2={...s,left:{...s.left,q:q*(1+C.dq)},right:{...s.right,q}};
+    if (M.indifferent(s2)) continue;
+    if (first===null) first=kt;
+    rests.push([kt,M.rest(s2,st.t)/DEG]);
+  }
+  const Yp=restAxes(RV,restSpan(rests.filter(r=>r[0]>=10).map(r=>r[1]))); // the span ignores the first knots, where one wing can be under the gate and the other not
+  for (const kt of [0,20,40,60,80,100,120,140]) el('text',{x:X(kt),y:h-12,'text-anchor':kt===140?'end':'middle'},RV.g).textContent=kt+(kt===140?' kt':'');
+  if (rests.length) el('path',{d:path(rests.map(r=>[X(r[0]),Yp(r[1])])),fill:'none',stroke:'var(--amber)','stroke-width':4},RV.g);
+  el('line',{x1:X(C.kt),x2:X(C.kt),y1:pad.t,y2:h-pad.b,stroke:'var(--text)','stroke-dasharray':'4 6'},RV.g);
+  const r=M.rest(s,st.t);
+  $('restcap').textContent=M.indifferent(s)?'No air and no weight: the wheel has no rest. It stays wherever it is left.':
+    first>0?`Below ${first} kt there is no air over the ailerons and no rest. Now it rests ${Math.abs(r/DEG)<.05?'level':Math.abs(r/DEG).toFixed(1)+'° '+(r>0?'right':'left')}.`:
+    `Now it rests ${Math.abs(r/DEG)<.05?'level':Math.abs(r/DEG).toFixed(1)+'° '+(r>0?'right':'left')}; the difference between the wings' angles and air moves it.`;
+}
+function drawRestA(s) {
+  const {pad,w,h}=RA;
+  const X=d=>pad.l+(d+10)/20*(w-pad.l-pad.r);
+  const rests=[];
+  if (!M.indifferent(s)) for (let d=-10;d<=10;d+=.25) {const s2={...s,left:{...s.left,alpha:s.right.alpha+d*DEG}};rests.push([d,M.rest(s2,st.t)/DEG]);}
+  const Yp=restAxes(RA,restSpan(rests.map(r=>r[1])));
+  for (const d of [-10,-5,0,5,10]) el('text',{x:X(d),y:h-12,'text-anchor':d===10?'end':d===-10?'start':'middle'},RA.g).textContent=(d>0?'+':'')+d+(d===10?'° left − right':'');
+  const now=(s.left.alpha-s.right.alpha)/DEG;
+  if (rests.length) el('path',{d:path(rests.map(r=>[X(r[0]),Yp(r[1])])),fill:'none',stroke:'var(--float)','stroke-width':4},RA.g);
+  el('line',{x1:X(M.clamp(now,-10,10)),x2:X(M.clamp(now,-10,10)),y1:pad.t,y2:h-pad.b,stroke:'var(--text)','stroke-dasharray':'4 6'},RA.g);
+  const s1={...s,left:{...s.left,alpha:s.right.alpha+1*DEG}},s0={...s,left:{...s.left,alpha:s.right.alpha}};
+  const per=(M.rest(s1)-M.rest(s0))/DEG;
+  $('restacap').textContent=M.indifferent(s)?'With no air the angle difference moves nothing.':
+    `Each degree the left wing's angle exceeds the right's moves the rest ${Math.abs(per).toFixed(1)}° ${per>0?'right':'left'} here (the float slope over the hinge slope, through the gearing). Now the difference is ${now.toFixed(1)}°.`;
+}
+
+// ---- readouts ----
+const read=$('read'),told=$('told');
+const kv=(box,rows)=>{box.innerHTML='';for (const [k,v] of rows) {const a=document.createElement('span');a.textContent=k;const b=document.createElement('b');b.textContent=v;box.append(a,b);}};
+const dir=(lbv,r,l)=>Math.abs(lbv)<.005?'none':(lbv>0?r:l)+' '+Math.abs(lbv).toFixed(2)+' lb';
+const wheelText=t=>Math.abs(t/DEG)<.05?'level':Math.abs(t/DEG).toFixed(1)+'° '+(t>0?'right':'left');
+const ailText=u=>Math.abs(u/DEG)<.05?'neutral':Math.abs(u/DEG).toFixed(1)+'° '+(u>0?'up':'down');
+let forceExact=true;
+$('ruleF').onclick=()=>{forceExact=true;$('ruleF').classList.add('on');$('ruleR').classList.remove('on');};
+$('ruleR').onclick=()=>{forceExact=false;$('ruleR').classList.add('on');$('ruleF').classList.remove('on');};
+function readouts(s) {
+  const T=M.torques(s,st.t),kt=q=>(Math.sqrt(2*q/1.225)/M.KT).toFixed(0);
+  const hand=held||dragging;
+  kv(read,[
+    ['Air over the left aileron',`${kt(s.left.q)} kt (${s.left.q.toFixed(0)} Pa) at ${(T.L.alpha/DEG).toFixed(1)}°`],
+    ['Air over the right aileron',`${kt(s.right.q)} kt (${s.right.q.toFixed(0)} Pa) at ${(T.R.alpha/DEG).toFixed(1)}°`],
+    ['Left aileron',ailText(T.g.left)+(s.left.stalled?`, stalled ${(s.left.stalled*100).toFixed(0)}%`:'')],
+    ['Right aileron',ailText(T.g.right)+(s.right.stalled?`, stalled ${(s.right.stalled*100).toFixed(0)}%`:'')],
+    ['Wheel',wheelText(st.t)],
+    ['Left aileron turns it',dir(M.rimLb(T.left),'right','left')],
+    ['Right aileron turns it',dir(M.rimLb(T.right),'right','left')],
+    ['Weights turn it',dir(M.rimLb(T.weight),'right','left')],
+    [hand?'Your hand holds it':'Net at the rim',hand?dir(-M.rimLb(T.total),'right','left'):dir(M.rimLb(T.total),'right','left')],
+    ['Rests at, friction aside',M.indifferent(s)?'wherever it is left':wheelText(M.rest(s,st.t))],
+    ['Last move on its own',lastFall||'—'],
+  ]);
+  const x=M.exact(st.t);
+  const r=M.solve(s,x,1000,forceExact);
+  $('ceiling').textContent=`The drive's best: ${r.ceiling} %`;
+  const flag=r.saturated?'at the drive\'s limit: lighter than the model':r.floored?(r.forceExact?'floored, force-exact: the centre follows the wheel':'floored, rest-exact: firmer than the model'):'following the model';
+  kv(told,[
+    ['Spring strength (0x2114)',`${r.strength}% — wants ${r.want.toFixed(0)}%; ${flag}`],
+    ['Spring centre (0x2116)',`${r.centre} counts, ${wheelText(M.angle(r.centre))}${r.centreLimited?' (held at the travel)':''}`],
+    ['Model at the wheel',dir(M.rimLb(r.modelNm),'right','left')],
+    ['Drive at the wheel',dir(M.rimLb(r.driveNm),'right','left')+(Number.isFinite(r.shrink)&&r.saturated?` (${(r.shrink*100).toFixed(0)}% of the model's slope)`:'')],
+    ['Drive\'s hands-off rest',wheelText(M.angle(r.centre))+(M.indifferent(s)?' (the wheel, with force-exact; level with rest-exact)':'')],
+    ['At full wheel this spring gives',`${M.rimLb(r.fullWheelNm).toFixed(2)} lb (${r.fullWheelUnits.toFixed(0)} of ${M.PROTECT} units)`],
+  ]);
+  $('rulecap').textContent=forceExact?
+    'Force-exact: where the model wants a softer spring than the drive\'s 20 %, the centre is put where the 20 % spring gives the model\'s force at the wheel. With no air that is the wheel itself, so it stays where it is left; hands off, it walks to the model\'s rest in a few updates.':
+    'Rest-exact (pitch\'s rule today): where the model wants a softer spring than 20 %, the centre stays on the model\'s rest and the wheel is firmer than the model. With no air it centres at 20 %, which the aircraft does not do.';
+}
+
+// ---- loop ----
+let dirty=true;function moved(){dirty=true;if (!held && !dragging) {fallStart=performance.now();fallFrom=st.t;}}
+let last=performance.now(),tick_=0;
+function frame(now) {
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  const s=reported();
+  if (!held && !dragging) {
+    const n=Math.max(1,Math.ceil(dt/0.001));for (let i=0;i<n;i++) M.step(st,s,dt/n);
+    const settled=st.w===0 || (Math.abs(st.w)<0.003 && Math.abs(st.t-M.rest(s,st.t))<0.003);
+    if (fallStart!==null && settled && now-fallStart>40) {
+      const t=(now-fallStart)/1000;
+      lastFall=Math.abs(st.t-fallFrom)<1e-3?(M.indifferent(s)?'did not move (nothing turns it)':'did not move (friction holds it)'):`${wheelText(fallFrom)} to ${wheelText(st.t)} in ${t.toFixed(2)} s`;
+      fallStart=null;
+    }
+  } else st.w=0;
+  if (dirty) {drawForce(s);drawRestV(s);drawRestA(s);dirty=false;}
+  const T=M.torques(s,st.t);
+  drawSection(secL,T.L,T.g.left,dt);drawSection(secR,T.R,T.g.right,dt);
+  // wheel
+  wheelG.setAttribute('transform',`translate(${hub.x},${hub.y}) rotate(${st.t/DEG})`);
+  const f=M.rimLb(T.total),mag=Math.min(1.6,Math.abs(f)/1.5),r=62;
+  if (Math.abs(f)<0.005||mag<.03) {wArc.setAttribute('d','');wHead.setAttribute('d','');}
+  else {
+    const a0=-Math.PI/2-0.3,sg=f>0?1:-1,a1=a0+sg*mag*1.6;    // clockwise on screen turns the wheel right
+    const pt=a=>[hub.x+r*Math.cos(a),hub.y+r*Math.sin(a)];
+    const [x0,y0]=pt(a0),[x1,y1]=pt(a1);
+    wArc.setAttribute('d',`M${x0},${y0} A${r},${r} 0 0 ${sg>0?1:0} ${x1},${y1}`);
+    const tx=-Math.sin(a1)*sg,ty=Math.cos(a1)*sg;
+    wHead.setAttribute('d',`M${x1+tx*16},${y1+ty*16} L${x1-ty*10},${y1+tx*10} L${x1+ty*10},${y1-tx*10} Z`);
+  }
+  wText.textContent=held||dragging?`Your hand holds it: ${dir(-f,'right','left')}`:`The ailerons turn the wheel: ${dir(f,'right','left')}`;
+  wText2.textContent=`Wheel ${wheelText(st.t)}`;
+  if (F.dot) {F.dot.setAttribute('cx',F.X(st.t/DEG));F.dot.setAttribute('cy',F.Y(f));}
+  if ((tick_++%6)===0) {readouts(s);
+    $('live').textContent=`Wheel ${wheelText(st.t)} · ${held||dragging?'you '+dir(-f,'right','left'):'turns '+dir(f,'right','left')} · ailerons ${ailText(T.g.left)} / ${ailText(T.g.right)}`;}
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

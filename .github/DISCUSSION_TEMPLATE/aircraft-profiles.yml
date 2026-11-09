@@ -1,0 +1,20 @@
+title: "[Profile] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Profiles, figures and sources for aircraft beyond the Cessna 172. The format is in
+        [configuration](https://github.com/antialias/mesmer/blob/main/docs/configuration.md).
+        A finished profile can go in an [aircraft profile request](https://github.com/antialias/mesmer/issues/new?template=aircraft_profile.yml) or a pull request.
+  - type: input
+    id: aircraft
+    attributes:
+      label: Aircraft and its .acf path
+    validations:
+      required: true
+  - type: textarea
+    id: discussion
+    attributes:
+      label: What you have, what you need, or what it felt like
+    validations:
+      required: true

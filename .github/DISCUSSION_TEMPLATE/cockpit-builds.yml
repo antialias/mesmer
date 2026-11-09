@@ -1,0 +1,12 @@
+title: "[Cockpit] "
+body:
+  - type: markdown
+    attributes:
+      value: Show your setup with Mesmer in it, or ask about fitting a yoke into a home cockpit. Leave out anything that identifies your home or network.
+  - type: textarea
+    id: build
+    attributes:
+      label: Your build
+      description: Photos welcome.
+    validations:
+      required: true

@@ -1,0 +1,26 @@
+title: "[Hardware] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Mesmer drives one thing today: the original CLS-E yoke on USB with controller firmware v367.
+        Tell us what you have. A [compatibility report](https://github.com/antialias/mesmer/blob/main/docs/compatibility-report.md) lists what helps. Leave out serial numbers and licence keys.
+  - type: input
+    id: hardware
+    attributes:
+      label: Your hardware
+      description: Model, USB or Ethernet, controller firmware from CLS2Sim.
+    validations:
+      required: true
+  - type: textarea
+    id: want
+    attributes:
+      label: What you'd like Mesmer to do with it
+    validations:
+      required: true
+  - type: checkboxes
+    id: tester
+    attributes:
+      label: Testing
+      options:
+        - label: I'm happy to test builds on this hardware.

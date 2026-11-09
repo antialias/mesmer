@@ -1,0 +1,118 @@
+# A tag v* builds the plugin on Windows from this tree, runs its tests and
+# publishes Mesmer-<version>.zip, its SHA256SUMS and a build provenance
+# attestation as a GitHub pre-release, with the CHANGELOG entry as its notes.
+# The tag and its commit come from flightsim's publish; nothing here edits code.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # The X-Plane SDK, downloaded at build time under its own licence. The
+  # publish checks this pin against the one the author's own builds use.
+  XPLANE_SDK_URL: https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK430.zip
+  XPLANE_SDK_SHA256: b9875ab27b593927b4f9b3e0ddfffe7401ee5dce6d86b50aea0da65f70ff7816
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version from the tag
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:TAG -notmatch '^v(\d+\.\d+\.\d+(-(alpha|beta|rc)\.\d+)?)$') {throw "Tag $env:TAG is not v<version>"}
+          $version=$Matches[1]
+          $updater=Get-Content -LiteralPath config/skunkcrafts_updater.cfg
+          if ($updater -notcontains "version|$version") {throw "config/skunkcrafts_updater.cfg is not for $version"}
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Download and verify the X-Plane SDK
+        run: |
+          $zip=Join-Path $env:RUNNER_TEMP 'xplane-sdk.zip'
+          Invoke-WebRequest -Uri $env:XPLANE_SDK_URL -OutFile $zip
+          $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne $env:XPLANE_SDK_SHA256) {throw "X-Plane SDK checksum $hash does not match the pin"}
+          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'xplane-sdk')
+          "XPLANE_SDK=$(Join-Path $env:RUNNER_TEMP 'xplane-sdk\SDK')" >> $env:GITHUB_ENV
+
+      - name: Build
+        run: |
+          cmake -S src -B build -G "Visual Studio 17 2022" -A x64 "-DXPLANE_SDK=$env:XPLANE_SDK"
+          if ($LASTEXITCODE) {exit $LASTEXITCODE}
+          cmake --build build --config Release
+          if ($LASTEXITCODE) {exit $LASTEXITCODE}
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $stage=Join-Path $env:RUNNER_TEMP 'stage'
+          $plugin=Join-Path $stage 'BrunnerDirect'
+          New-Item -ItemType Directory -Path (Join-Path $plugin 'win_x64') | Out-Null
+          Copy-Item -LiteralPath build/Release/BrunnerDirect.xpl -Destination (Join-Path $plugin 'win_x64')
+          foreach ($file in 'config/BrunnerDirect.ini','config/BrunnerDirect.profiles.json','config/skunkcrafts_updater.cfg','README.md','LICENSE','NOTICE','SAFETY.md') {
+            Copy-Item -LiteralPath $file -Destination $plugin
+          }
+          New-Item -ItemType Directory -Path dist | Out-Null
+          $zip="dist/Mesmer-$env:VERSION.zip"
+          Compress-Archive -Path $plugin -DestinationPath $zip
+          $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText((Join-Path $PWD 'dist/SHA256SUMS'),"$hash  Mesmer-$env:VERSION.zip`n")
+          Get-Content dist/SHA256SUMS
+
+      # GitHub attests only public repositories on personal plans, so a release
+      # staged while the repository is private has none.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/Mesmer-${{ steps.version.outputs.version }}.zip
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $lines=Get-Content -LiteralPath CHANGELOG.md
+          $heading='^##\s+\[?v?'+[regex]::Escape($env:VERSION)+'\]?(\s|\]|$)'
+          $inside=$false;$notes=@()
+          foreach ($line in $lines) {
+            if ($line.StartsWith('## ')) {if ($inside) {break};$inside=$line -match $heading;continue}
+            if ($inside) {$notes+=$line}
+          }
+          $text=($notes -join "`n").Trim()
+          if (!$text) {throw "CHANGELOG.md has no entry for $env:VERSION"}
+          [IO.File]::WriteAllText((Join-Path $env:RUNNER_TEMP 'notes.md'),$text+"`n")
+
+      - name: Publish the pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create $env:TAG "dist/Mesmer-$env:VERSION.zip" dist/SHA256SUMS --prerelease --verify-tag --title "Mesmer $env:VERSION" --notes-file (Join-Path $env:RUNNER_TEMP 'notes.md')
+          if ($LASTEXITCODE) {exit $LASTEXITCODE}

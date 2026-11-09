@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>Stall simulator</title>
+<style>
+:root{--page:#15181c;--panel:#1d2228;--line:#2c333b;--text:#e8ebee;--muted:#8b949e;--amber:#f2a93b;--blue:#58a6ff;--weight:#c9d0d6;--red:#e5484d;--green:#3fb950;--tab:#3fb950;--float:#d2a8ff;--own:#ff5fd2;--off:#8b949e}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+body{background:var(--page);color:var(--text);font:20px/1.35 -apple-system,"Segoe UI",Inter,sans-serif;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:1px solid var(--line);border-radius:10px;padding:0 16px;min-height:44px;cursor:pointer;touch-action:manipulation}
+button.on{border-color:var(--amber);color:var(--amber)}
+button.own.on{border-color:var(--own);color:var(--own)}
+#top{display:flex;align-items:baseline;gap:20px;padding:12px 24px;border-bottom:1px solid var(--line)}
+#top h1{margin:0;font-size:28px;font-weight:600}
+.cap{color:var(--muted);font-size:17px}
+main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;padding:16px 24px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 18px;min-width:0}
+h2{margin:0 0 4px;font-size:22px;font-weight:600}
+h3{margin:12px 0 2px;font-size:17px;font-weight:500;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:6px 0 4px}
+.warn{color:var(--amber);font-size:17px;margin-top:4px}
+svg{display:block;width:100%;height:auto}
+svg text{font:16px -apple-system,"Segoe UI",Inter,sans-serif;fill:var(--muted)}
+.read{display:grid;grid-template-columns:auto 1fr;gap:2px 16px;margin-top:8px}
+.read b{font-weight:500;color:var(--text);text-align:right}
+.read span{color:var(--muted)}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:17px;color:var(--muted);margin-top:2px}
+.legend i{display:inline-block;width:18px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+#notes{grid-column:1/-1;color:var(--muted);font-size:16px}
+#notes p{margin:4px 0}
+#notes .tag{color:var(--text)}
+.hand{cursor:grab;touch-action:none}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+#stage{display:flex;flex-direction:column;gap:16px}
+#live{display:none}
+#time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:17px}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+@media (max-width:600px){
+  main{display:flex;flex-direction:column;gap:12px;padding:0 12px 12px}
+  .col{display:contents}
+  #top{flex-wrap:wrap;gap:4px 12px;padding:8px 12px}#top h1{font-size:22px}#top .cap{font-size:14px}
+  /* The aircraft and yoke stay in view while the controls and charts scroll under them. */
+  #stage{position:sticky;top:0;z-index:5;gap:0;margin:0 -12px;padding:4px 12px 6px;background:var(--page);box-shadow:0 10px 14px -10px #000}
+  #stage section{border:0;background:none;padding:0}
+  #stage h2,#stage .legend,#handcap,#stage .dup{display:none}
+  #stage svg text{font-size:24px}
+  #live{display:block;font-size:15px;color:var(--text);line-height:1.3;min-height:4em}
+  #hold{min-height:40px;padding:0 12px;white-space:nowrap;font-size:17px}
+  section{padding:10px 12px}
+  svg text{font-size:22px}
+  #strip text{font-size:20px}
+  button{padding:0 12px;min-height:40px;font-size:17px}
+}
+@media (max-height:500px) and (orientation:landscape){
+  main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 12px;padding:0 12px 12px;align-items:start}
+  .col{display:contents}
+  main>section,.col>section,main>#notes{grid-column:2}
+  #top{padding:6px 12px}#top h1{font-size:22px}#top .cap{display:none}
+  #stage{grid-column:1;grid-row:1/span 12;position:sticky;top:0;gap:0;max-height:100vh;overflow:hidden}
+  #stage section{border:0;background:none;padding:4px 0}
+  #stage h2,#stage .legend,#handcap,#stage .dup{display:none}
+  #stage svg text{font-size:24px}
+  #live{display:block;font-size:15px;color:var(--text);line-height:1.3;min-height:3.9em}
+  section{padding:10px 12px}
+  svg text{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div id="top"><h1>Stall simulator</h1><span class="cap">Cessna 172, pitch axis: a stand-in for X-Plane's aircraft flown from the yoke, with the plugin's elevator model and its own-stall rule beside it</span></div>
+<main>
+  <div class="col">
+   <div id="stage">
+    <section>
+      <h2>Aircraft, from the right side <span class="cap">(the stand-in for X-Plane)</span></h2>
+      <svg id="plane" viewBox="0 0 800 300" aria-label="Aircraft side view"></svg>
+      <div class="legend"><span><i style="background:var(--blue)"></i>Relative wind</span><span><i style="background:var(--red)"></i>Wing stalled (X-Plane's)</span><span><i style="background:var(--own)"></i>Elevator's own stall (the plugin's)</span><span><i style="background:var(--amber)"></i>Elevator</span></div>
+    </section>
+    <section>
+      <h2>Yoke</h2>
+      <svg id="yoke" viewBox="0 0 800 170" aria-label="Yoke fore and aft travel"></svg>
+      <div class="row">
+        <button id="hold">Let go</button>
+        <button id="pause">Pause</button>
+        <button id="slow">¼ speed</button>
+        <button id="slower">⅒ speed</button>
+        <span id="time"></span>
+        <span class="cap" id="handcap">Drag the yoke and hold it, as the pilot does; let go and it runs on the drive's line, what the plugin told the Brunner.</span>
+      </div>
+      <span id="live"></span>
+    </section>
+   </div>
+    <section>
+      <h2>Manoeuvres</h2>
+      <div class="presets" id="presets"></div>
+      <div class="cap" id="presetcap" style="margin:-2px 0 8px"></div>
+      <div class="row"><button id="own" class="own">Elevator's own stall: on (13°)</button><button id="restart">Restart</button></div>
+      <div class="cap">The toggle is the plugin's <code>stall_deg</code>, 13° against 0 (off). It changes what the yoke is told, so a held yoke feels it and a released yoke moves on it; the aircraft stand-in has no rule of its own and flies the same for the same yoke. Both forces are always charted.</div>
+    </section>
+    <section>
+      <h2>Now</h2>
+      <div class="read" id="read"></div>
+    </section>
+  </div>
+  <div class="col">
+    <section>
+      <div class="row" style="margin:0 0 4px"><h2 id="striph" style="margin:0">The last ten seconds</h2><button id="zoom">Window: 10 s</button></div>
+      <svg id="strip" viewBox="0 0 640 1030" aria-label="Strip chart"></svg>
+      <div class="legend"><span><i style="background:var(--weight)"></i>Wing, X-Plane's</span><span><i style="background:var(--blue)"></i>Tail</span><span><i style="background:var(--own)"></i>Own stall on</span><span><i style="background:var(--off)"></i>Own stall off</span><span><i style="background:var(--amber)"></i>Yoke; load factor</span><span><i style="background:var(--green)"></i>Airspeed</span><span><i style="background:var(--red);opacity:.6"></i>Stalled</span></div>
+      <div class="cap">Forces: pull-to-hold positive, what the drive is told (thick, held to the drive's ceiling) and the model's own figure (thin). Where the two thick lines part is what the own stall changes at the yoke.</div>
+    </section>
+    <section>
+      <h2>What the yoke would be told</h2>
+      <div class="read" id="told"></div>
+    </section>
+  </div>
+  <section id="notes">
+    <p><b style="color:var(--text);font-weight:500">What is whose.</b>
+    In the aircraft X-Plane flies the airplane and reports the tail's angle and stall flags; the plugin reads them and computes the elevator's hinge moment and the yoke's force (decision 17). Here the <i>aircraft</i> panel is a stand-in for X-Plane: a longitudinal (pitch-plane) simulation flown from the yoke, so its wing stalls from angle of attack at any load factor, accelerated stalls included. The <i>plugin</i> is <code>elevator.html</code>'s model block, copied unchanged (<code>elevator_vectors.mjs</code> checks it): it is given the tail's angle the stand-in would report (the wing's angle, plus the tail's setting, less the downwash, plus the pitch rate's share: no deflection in it, as TailAir assumes), the air over the tail, the load factor and the trim, exactly as <code>elevator.html</code>'s <code>state()</code> builds them, and from those it computes the stalled share, the rest and what the drive is told (<code>solve</code>, 222 units per lb). The one thing judged here is its <i>own stall</i>: the tail's angle plus τ·δ past 13° over a 4° spread, which is the plugin's rule, not X-Plane's.</p>
+    <p><b style="color:var(--text);font-weight:500">The stand-in's figures.</b>
+    Everything <code>Flight</code> has is taken from it: weight 2550 lb, area 174 ft², the wing's lift slope 4.55 per radian and zero-lift angle −2.1°, the stall at 17.3° with the lift blending into a flat plate's over 4°, the downwash 1.085·2C<sub>L</sub>/(π·AR), the tail's setting −2.5°, the tail arm 4.5 m, the thrust, and the air over the tail (<code>Elevator.tailQ</code>). What <code>Flight</code> lacks, each a guess at a C172's size:
+    pitch inertia 1825 kg·m² (1346 slug·ft², the commonly quoted 172 figure, not checked against a copy) <span class="tag">guessed</span>;
+    mean chord 1.47 m <span class="tag">derived</span> from the area and span;
+    horizontal tail 3.28 m² (35.3 ft², stabilizer and elevator) <span class="tag">published, not checked</span>, lift slope 3.7 per radian for its aspect ratio <span class="tag">derived</span>;
+    the wing's pitching moment −0.05 (NACA 2412) with the centre of gravity and the fuselage together 8% of the chord behind the aerodynamic centre, so the airplane's Cm<sub>α</sub> is about −0.95 per radian (the tail's −1.3 less the wing's and body's +0.36) <span class="tag">guessed</span>;
+    a stalled wing's centre of pressure moving to mid-chord, so its moment goes nose-down as it stalls <span class="tag">guessed</span>;
+    drag 0.03 plus the induced share, and a flat plate's when stalled <span class="tag">guessed</span>;
+    the tail's lift stops rising past the section's stall, the same 13° and 4° as the plugin's rule, blending into a flat plate's <span class="tag">guessed</span>: X-Plane's tail does something of the kind, the figures are unknown;
+    the tail's lift turns the airplane but is left out of the lift sum, so the wing carries the load factor as <code>Flight</code> has it <span class="tag">assumed</span>.
+    Pitch damping comes only from the tail's pitch-rate share (Cm<sub>q</sub> −14.2 by finite differences), which gives a short period of 6.0 rad/s with a damping ratio of 0.58 at 110 kt <span class="tag">derived</span>; Roskam's C172 derivatives give 5.65 rad/s and 0.71. The altitude starts at 1000 ft and the air density stays sea level's <span class="tag">assumed</span>. A released yoke is the Brunner's: a 3 kg mass at the grip on the drive's line, refreshed every 10 ms, damped 0.6 of critical with 1 lb of friction <span class="tag">guessed</span>. Each run starts trimmed: the elevator at the angle that holds the speed level, the throttle at what holds it, and the trim tab set so the plugin's force there is zero (or as near as the tab reaches). Scripted manoeuvres move the yoke as a hand would; dragging takes over from them.</p>
+    <p><b style="color:var(--text);font-weight:500">How to read it.</b>
+    The wing's stalled share is X-Plane's job: it comes from the wing's angle alone, at whatever speed and load factor the pull reaches, so a hard pull at 90 kt stalls it at 2 g and more. The elevator's own share is the plugin's rule and nothing else. The two force lines are <code>solve</code> with <code>stall_deg</code> 13 and 0 on the same state, both given X-Plane's tail stall flags as the plugin is (<code>tail_stalled_xp</code>: here the stand-in's section stall at the tail's angle alone), so their gap is what the rule adds beyond those flags; the drive's ceiling (<code>drive_margin_units</code> 4000 at <code>pitch_force_units_per_lb</code> 222: 18 lb at the far stop) clips both where the model asks more. Nothing here is X-Plane: what its tail panels report in a yank is step 0 of the plan.</p>
+    <p><b style="color:var(--text);font-weight:500">What the runs show, and how sure that is.</b>
+    A full-aft snatch in 0.1 s at 110 kt takes the elevator's own angle to −12.1°, 0.9° short of the rule: the stand-in's pitch rate lifts the tail's angle within hundredths of a second. Only a snatch faster than a hand (20 ms) or a shove to the forward stop from a stall in 0.15 s or less passes it. Statically the rule fires at the aft stop whenever the reported tail angle is below +1° (−2° at cruise, so at cruise it is only the pitch rate that saves it), so a 1° difference in X-Plane's real cruise tail angle, from the tail's incidence or the downwash (step 0's measurement), could flip the 0.1 s case either way. And the drive's ceiling hides all of it: with the model asking 50 to 300 lb at a stop, both lines sit at 18 lb, and with X-Plane's flags carried by both the gap at the drive is zero throughout every run here (the 20 ms snatch peaks at a 56% own share, the 0.15 s shove at 74%, each for a few hundredths of a second). A frontier review integrating Roskam's C172 derivatives (Cm<sub>α</sub> −0.89, Cm<sub>q</sub> −12.4, Cm<sub>α̇</sub> −5.2, Cm<sub>δe</sub> −1.28) agrees, and finds this stand-in errs toward firing.</p>
+  </section>
+</main>
+<script id="model">
+// The chain that gives the tail its angle and stall on the page (decision 17):
+// airspeed, load factor and power -> the wing's angle and its stalled share ->
+// the downwash behind it -> the tail's angle, with the pitch rate's share. In
+// the aircraft X-Plane computes all of this and the plugin reads the tail
+// panels' angle and stall flags (TailAir.panels); the page computes it so the
+// yoke can be tried in a stall without the sim. Quasi-static: each moment is a
+// steady state, no lag between the wing's angle and the downwash at the tail.
+// A Cessna 172S at 2550 lb, flaps up, sea level. Every figure's source and how
+// sure it is are in the page's notes.
+const Flight=(()=>{
+  const DEG=Math.PI/180,KT=0.514444,RHO=1.225,G=9.80665;
+  const P={weight:11343,area:16.17,span:11.0,a2d:6.0,e:0.8,alpha0:-2.1*DEG,stallKt:53,
+    width:4*DEG,postLift:1.15,maxAlpha:24*DEG,downwash:1.085,incidence:-2.5*DEG,tailArm:4.5,
+    groundAttitude:1.5*DEG,power:134000,prop:0.75,staticThrust:2400};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  const AR=P.span*P.span/P.area;
+  const slope=P.a2d/(1+P.a2d/(Math.PI*P.e*AR));                 // the wing's lift slope, per radian
+  const clMax=P.weight/(.5*RHO*(P.stallKt*KT)**2*P.area);        // what the POH's flaps-up stall speed needs
+  const critical=P.alpha0+clMax/slope;                           // the wing's angle at its stall
+  const stalledShare=a=>clamp((a-critical)/P.width,0,1);
+  // Lift: the straight line up to the stall; past it the stalled share blends
+  // it into a flat plate's, so lift falls as the share grows.
+  const lift=a=>{const x=stalledShare(a);return (1-x)*slope*(a-P.alpha0)+x*P.postLift*Math.sin(2*a);};
+  const thrust=(throttle,v)=>throttle*Math.min(P.staticThrust,P.prop*P.power/Math.max(v,1));
+  // c: {kt, throttle, n (the load factor asked for), ground (on its wheels),
+  // pitchRate (deg/s beyond a steady pull's), tailwind (kt from behind, on the
+  // ground)}. Angles in radians.
+  const of=c=>{
+    const n=Number.isFinite(c.n)?c.n:1,v=Math.max(c.kt,0)*KT,throttle=c.throttle;
+    if (c.ground) {
+      // On its wheels the wing sits at its ground attitude; the downwash is
+      // that angle's. The wind from behind meets the prop's wash head on: their
+      // pressures subtract, and past it the air over the tail comes from behind.
+      const aw=P.groundAttitude,cl=slope*(aw-P.alpha0),eps=P.downwash*2*cl/(Math.PI*AR);
+      const tw=Number.isFinite(c.tailwind)?Math.max(c.tailwind,0):0,u=c.kt-tw;
+      let q=Elevator.tailQ(Math.max(u,0),throttle),reversed=false;
+      if (u<0) {const net=Elevator.tailQ(0,throttle)-.5*RHO*(u*KT)**2;reversed=net<0;q=Math.abs(net);}
+      const theta=aw+P.incidence;                                // the tail's chord against the ground
+      const tail=reversed?theta:theta-eps;                       // with air from behind, no downwash reaches it
+      // X-Plane's angle for air from behind is the angle plus 180°, kept within ±180°.
+      const reported=reversed?(theta>=0?theta-Math.PI:theta+Math.PI):tail;
+      return {ground:true,q,reversed,alphaW:aw,wingStalled:0,cl,n:1,asked:1,epsilon:reversed?0:eps,pitchRate:0,
+        pitchShare:0,alphaT:tail,reported,thrust:thrust(throttle,0),critical,clMax};
+    }
+    const V=Math.max(v,1),qw=.5*RHO*V*V,T=thrust(throttle,V);
+    // The angle the pull asks for: the lift for n times the weight, less the
+    // thrust's lift share, on the straight line. Past the stall it is the angle
+    // the held pull reaches when the lift no longer follows, up to maxAlpha:
+    // the chain has no pitching moment, so where a full-up elevator holds a
+    // stalled wing is a guess.
+    let aw=P.alpha0+n*P.weight/(qw*P.area)/slope;
+    for (let i=0;i<20;i++) aw=clamp(P.alpha0+(n*P.weight-T*Math.sin(clamp(aw,-P.maxAlpha,P.maxAlpha)))/(qw*P.area)/slope,-P.maxAlpha,P.maxAlpha);
+    const wingStalled=stalledShare(aw),cl=lift(aw);
+    const reached=wingStalled>0||aw>=P.maxAlpha?(cl*qw*P.area+T*Math.sin(aw))/P.weight:n;
+    const eps=P.downwash*2*cl/(Math.PI*AR);
+    const pitchRate=G*(reached-1)/V+(Number.isFinite(c.pitchRate)?c.pitchRate:0)*DEG;
+    const pitchShare=pitchRate*P.tailArm/V;
+    const tail=aw+P.incidence-eps+pitchShare;
+    return {ground:false,q:Elevator.tailQ(c.kt,throttle),reversed:false,alphaW:aw,wingStalled,cl,n:reached,asked:n,
+      epsilon:eps,pitchRate,pitchShare,alphaT:tail,reported:tail,thrust:T,critical,clMax};
+  };
+  return {P,AR,slope,clMax,critical,stalledShare,lift,thrust,of};
+})();
+// The tail's angle of attack and stall, as the elevator's hinge moment takes
+// them (decision 17; docs/brunner/aileron-and-aoa-plan.md, section 3), the
+// ailerons' rules: X-Plane's tail panels (the profile's tail_sections, 8 and
+// 9) give the angle and the stalled share, each weighted by the panel's own
+// q*area; a panel under 2.5 Pa says nothing and the angle is clamped to ±30°.
+// The float slope cha (Ch_alpha) and the share a stalled tail keeps (keep, the
+// profile's stall_factor) are the profile's figures; the page carries them in
+// s so it can turn them, and a missing one is P's.
+// alpha is the tail's angle as X-Plane reports it, radians, positive with the
+// air coming from below. It is taken to exclude the elevator's own deflection
+// (step 0 of the plan has not measured it); if it includes it, the plugin
+// subtracts that share of elevator1_deg before it reaches the model.
+// s.surface, the page's: the tail stalls on its own angle plus the elevator's
+// share, alpha + tau*d, past a thin symmetric section's stall angle, its
+// stalled share ramping to 1 over width. In the aircraft X-Plane's tail flags
+// are s.stalled instead, if step 0 shows they follow the deflection.
+const TailAir=(()=>{
+  const DEG=Math.PI/180;
+  const P={cha:0.20,keep:0.4,minPa:2.5,alphaClamp:30*DEG,tau:0.5,stall:13*DEG,width:4*DEG,kRev:1.0};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  // From the tail's panels, as flight.hpp's aileron_side reads a wing: each
+  // {speed m/s, area m², alphaDeg, stalled (a flag, stalled at 0.5 or more)}.
+  // q is area-weighted over all of them; the angle (degrees) and the stalled
+  // share are weighted by q*area over the panels with minPa or more. Null when
+  // X-Plane does not supply a value or the density is not positive. Angles
+  // wrap at ±180°: while every counted panel lies within ±90° the angle is the
+  // plain weighted mean; otherwise each is unwrapped about the weighted
+  // circular mean before the mean is taken, and the result wrapped to
+  // (-180°, 180°], so panels astride ±180° read as air from behind, not as 0°.
+  const wrapped=deg=>deg-360*Math.ceil((deg-180)/360);
+  const panels=(rho,list)=>{
+    if (!(Number.isFinite(rho)&&rho>0)) return null;
+    let area=0,pressureArea=0,weight=0,angle=0,stalled=0,sines=0,cosines=0,ahead=true;
+    for (const p of list) {
+      if (!(Number.isFinite(p.speed)&&p.speed>=0&&Number.isFinite(p.area)&&p.area>0)) return null;
+      const q=.5*rho*p.speed*p.speed;
+      area+=p.area;pressureArea+=p.area*q;
+      if (q<P.minPa) continue;
+      if (!Number.isFinite(p.alphaDeg)||!Number.isFinite(p.stalled)) return null;
+      weight+=q*p.area;angle+=q*p.area*p.alphaDeg;stalled+=p.stalled>=.5?q*p.area:0;
+      sines+=q*p.area*Math.sin(p.alphaDeg*DEG);cosines+=q*p.area*Math.cos(p.alphaDeg*DEG);
+      ahead=ahead&&Math.abs(p.alphaDeg)<90;
+    }
+    if (!(area>0)) return null;
+    if (!ahead&&weight>0) {
+      const centre=Math.atan2(sines,cosines)/DEG;angle=0;
+      for (const p of list) {const q=.5*rho*p.speed*p.speed;if (q>=P.minPa) angle+=q*p.area*(centre+wrapped(p.alphaDeg-centre));}
+      angle=wrapped(angle/weight)*weight;
+    }
+    return {q:pressureArea/area,alphaDeg:weight>0?angle/weight:0,stalled:weight>0?stalled/weight:0};
+  };
+  // What the hinge moment uses at elevator angle d: the gated, clamped angle;
+  // the stalled share; eff, the share of the air's moments kept,
+  // 1 - (1 - keep)*stalled. Under minPa over the tail, angle and stall say
+  // nothing. Only they are gated, not the air's stiffness, unlike the
+  // ailerons' whole-moment gate: the elevator's stiffness came first and stays
+  // exactly as it was. reversed: the air comes from behind (beyond ±90°, a
+  // tailwind on the ground). Modelled (decision 17, the owner, 2026-11-09):
+  // the deflection's moment turns over, kRev of it, so the elevator runs to a
+  // stop; the angle is taken against the reversed stream, so a tail whose
+  // chord is level reads 0 either way. It turns over smoothly, never across a
+  // hair's width: turn, the deflection's share of its moment, is whole within
+  // the angle clamp and past it cos(raw)/cos(clamp), held to ±1, its reversed
+  // half times kRev: 0 with the air across the tail (±90°), -kRev from ±150°.
+  // ahead, the same without its reversed half, fades the elevator's own stall,
+  // a stall of air from ahead. reversed reports the air mostly from behind;
+  // nothing in the moments steps on it. beyond: past the clamp, where the
+  // rest is scanned. Over the gate turn's departure from 1 fades in with q,
+  // none at minPa to all at twice it, so air from behind does not step in.
+  const turnOf=(raw,kRev,q)=>{if (Math.abs(raw)<=P.alphaClamp) return {turn:1,ahead:1};
+    const c=clamp(Math.cos(raw)/Math.cos(P.alphaClamp),-1,1),turn=c>=0?c:kRev*c,share=clamp((q-P.minPa)/P.minPa,0,1);
+    return {turn:share>=1?turn:1+(turn-1)*share,ahead:Math.max(0,c)};};
+  const of=(s,d=0)=>{
+    const on=s.q>=P.minPa,raw=Number.isFinite(s.alpha)?s.alpha:0,reversed=on&&Math.abs(raw)>Math.PI/2;
+    const kRev=Number.isFinite(s.kRev)?s.kRev:P.kRev,{turn,ahead}=on?turnOf(raw,kRev,s.q):{turn:1,ahead:1};
+    const rel=reversed?(raw>0?Math.PI-raw:-Math.PI-raw):raw;
+    const alpha=on?clamp(rel,-P.alphaClamp,P.alphaClamp):0;
+    const given=on&&Number.isFinite(s.stalled)?clamp(s.stalled,0,1):0,f=s.surface;
+    const effective=f&&on&&ahead>0?rel+f.tau*d:0;
+    const surface=f&&on&&ahead>0?ahead*clamp((Math.abs(effective)-f.stall)/f.width,0,1):0;
+    const stalled=surface>given?surface:given;
+    const keep=Number.isFinite(s.keep)?clamp(s.keep,0,1):P.keep,cha=Number.isFinite(s.cha)?s.cha:P.cha;
+    return {alpha,stalled,keep,cha,eff:1-(1-keep)*stalled,reversed,kRev,effective,surface,turn,ahead,beyond:on&&Math.abs(raw)>P.alphaClamp};
+  };
+  return {P,DEG,panels,of};
+})();
+// The elevator about its hinge. Positive deflection is trailing edge down,
+// which is the yoke forward. Kept free of the page so the feel page can reuse it.
+// The tail's angle adds the float, -q*area*chord*cha*alpha: with cha positive
+// (the elevator floats with the flow) a positive tail angle floats the
+// trailing edge up, so the yoke's rest moves aft; a negative one, forward. A
+// stalled share scales the air's moments, deflection, trim and float alike,
+// to eff of themselves; the weight is the weight. With air from behind the
+// deflection's moment turns over (kRev of it, smoothly, TailAir's turn): the
+// elevator diverges to a stop.
+// With no angle, nothing stalled and no s.surface the model is exactly the
+// one before them.
+const Elevator=(()=>{
+  const INLB=0.112985,KT=0.514444,RHO=1.225,DEG=Math.PI/180;
+  const P={area:1.350,chord:0.427,slope:0.45,up:28*DEG,down:23*DEG,gearing:0.137,inertia:0.40,
+    wash:30,tabRatio:0.6,tabUp:22*DEG,tabDown:19*DEG,zeta:0.4};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  // Air pressure over the tail, Pa: airspeed plus prop wash (rough slipstream, 30 m/s at full power parked).
+  const tailQ=(kt,throttle)=>{const v=kt*KT,w=P.wash*throttle*Math.max(0,1-v/80);return .5*RHO*(v*v+w*w);};
+  const stiffness=q=>q*P.area*P.chord*P.slope; // N·m per radian away from where the air holds it
+  // Trim wheel -1 (nose down) .. +1 (nose up): the tab moves the elevator's float angle.
+  const tabAngle=t=>t>=0?t*P.tabDown:t*P.tabUp;      // the tab against the elevator, trailing edge down positive
+  const trimFloat=t=>-P.tabRatio*tabAngle(t);
+  // The float's moment, N·m, trailing edge down positive: constant across the travel.
+  const floatMoment=(s,a)=>-s.q*P.area*P.chord*a.cha*a.eff*a.alpha;
+  const moments=(s,d)=>{
+    const a=TailAir.of(s,d);
+    const weight=s.unbalance*INLB*s.g*Math.cos(d),float_=floatMoment(s,a);
+    const air=-stiffness(s.q)*a.turn*a.eff*(d-s.trim);
+    return {weight,air,float:float_,net:weight+air+float_};
+  };
+  const lb=h=>h/INLB*P.gearing;            // N·m at the hinge -> lb at the yoke
+  const inches=d=>d/P.gearing;             // elevator angle -> yoke inches, forward positive
+  // With air from behind, or a stall that changes along the travel: from
+  // where the elevator is (from, rad; trim when not given), follow the net
+  // moment in quarter degrees to where it turns over (then bisect) or to a
+  // stop: the balance a free elevator reaches from there. Where the stall
+  // makes two balances, the elevator keeps to the one on its side of the
+  // unstable point between them, so the rest holds still as the air changes
+  // until that balance goes. With air from behind the balance is unstable,
+  // so it runs to the stop it is pushed toward.
+  const scan=(s,from)=>{
+    const net=d=>moments(s,d).net,sign=v=>v>0?1:v<0?-1:0,step=0.25*DEG;
+    let d=clamp(Number.isFinite(from)?from:s.trim,-P.up,P.down);const way=sign(net(d));
+    if (way===0) return d;
+    for (;;) {
+      const e=clamp(d+way*step,-P.up,P.down);
+      if (e===d) return d;
+      if (sign(net(e))!==way) {
+        let lo=d,hi=e;for (let i=0;i<60;i++) {const m=(lo+hi)/2;if (sign(net(m))===way) lo=m;else hi=m;}
+        return (lo+hi)/2;
+      }
+      d=e;
+    }
+  };
+  const rest=(s,from)=>{                   // where weight, air and float balance, friction aside, reached from `from`
+    if (s.surface||TailAir.of(s).beyond) return scan(s,from);
+    const a=TailAir.of(s),K=stiffness(s.q)*a.eff,W=s.unbalance*INLB*s.g,F=-floatMoment(s,a);
+    if (K<1e-9) {                         // no centring: weight and float alone, the side they push from neutral
+      const n=W-F;
+      if (n>0) return W*Math.cos(P.down)-F>=0?P.down:Math.acos(F/W);
+      if (n<0) return W*Math.cos(P.up)-F<=0?-P.up:-Math.acos(F/W);
+      return clamp(s.trim,-P.up,P.down);
+    }
+    let d=clamp(s.trim+(W-F)/K,-P.up,P.down);
+    for (let i=0;i<30;i++) {const f=W*Math.cos(d)-K*(d-s.trim)-F,df=-W*Math.sin(d)-K;d=clamp(d-f/df,-P.up,P.down);}
+    return d;
+  };
+  // One step of the free elevator: inertia, air damping, control-system friction, stops.
+  const step=(st,s,dt)=>{
+    const m=moments(s,st.d),K=stiffness(s.q)*TailAir.of(s,st.d).eff;
+    const damping=2*P.zeta*Math.sqrt(P.inertia*K)+0.02;
+    const friction=s.friction/P.gearing*INLB; // lb at the yoke -> N·m at the hinge
+    let torque=m.net-damping*st.w;
+    if (Math.abs(st.w)<1e-4) {
+      if (Math.abs(m.net)<=friction) {st.w=0;return;}
+      torque-=Math.sign(m.net)*friction;
+    } else torque-=Math.sign(st.w)*friction;
+    const w0=st.w;st.w+=torque/P.inertia*dt;
+    if (w0!==0 && Math.sign(st.w)!==Math.sign(w0) && Math.abs(m.net)<=friction) st.w=0; // friction stops it, never reverses it
+    st.d+=st.w*dt;
+    if (st.d>P.down) {st.d=P.down;if (st.w>0) st.w=0;}
+    if (st.d<-P.up) {st.d=-P.up;if (st.w<0) st.w=0;}
+  };
+  // Elevator angle -> the yoke drive's signed counts, 12000 at either stop, forward positive.
+  const counts=d=>Math.round(clamp(d>=0?d/P.down:d/P.up,-1,1)*12000);
+  // The model in the yoke's terms (elevator.hpp's solve_pitch reports the same;
+  // elevator_vectors.json holds the two together).
+  // The stiffness is the stalled share's at the rest (eff) and the air's
+  // direction's (turn): through 0 with the air across the tail, negative with
+  // it from behind; the float, constant across the travel, is floatLb.
+  const drive=(s,from)=>{const r=rest(s,from),a=TailAir.of(s,r),k=stiffness(s.q)*a.turn*a.eff;
+    return {weightLb:lb(s.unbalance*INLB*s.g),centreCounts:counts(clamp(s.trim,-P.up,P.down)),
+    stiffnessLbPerIn:k/INLB*P.gearing*P.gearing,restCounts:counts(r),floatLb:lb(floatMoment(s,a))};};
+  // What the drive is told for the yoke at x0 counts: elevator.hpp's
+  // solve_pitch, step for step. Its line is F(x) = b - ks*(x - c) in drive
+  // units, ks = strength*1000/12000/100 per count. c sits on the model's rest
+  // reached from x0 (from trim when x0 is not given),
+  // b is the model's force there (zero inside the travel, the weight's push
+  // at a stop), and the strength is the secant from there to x0, at least 60
+  // counts long, held to 20..the drive's ceiling (20%: the softest the drive
+  // accepts). The ceiling (decision 16, tuning.hpp's drive_ceiling): the
+  // strongest whole percent, 400 down to 21, whose line, constant force
+  // included, stays within 4000 units over the travel, else 20; the line is
+  // worst at the stop farther from its zero, k = strength*10/travel per count.
+  const TRAVEL=12000,UNIT=1000/12000/100,SECANT=60,MAX_BIAS=2250,SOFTEST=20;
+  const MARGIN=4000,UNITS_PER_PERCENT=10,STRONGEST=MARGIN/UNITS_PER_PERCENT;
+  // Pitch's constant-force cut-off (0x211f, tuning.hpp's bias_offset_off): a
+  // strength sent with a constant force stays below it.
+  const BIAS_OFFSET_OFF=101,STRONGEST_WITH_BIAS=BIAS_OFFSET_OFF-1;
+  const lround=v=>Math.sign(v)*Math.round(Math.abs(v)); // C's lround: halves away from zero
+  const worstForce=(strength,centre,held,travel)=>{
+    const k=strength*UNITS_PER_PERCENT/travel;
+    return Math.max(Math.abs(held-k*(travel-centre)),Math.abs(held-k*(-travel-centre)));
+  };
+  const driveCeiling=(travel,line)=>{
+    for (let s=STRONGEST;s>SOFTEST;s--) {const [centre,held]=line(s);if (worstForce(s,centre,held,travel)<=MARGIN) return s;}
+    return SOFTEST;
+  };
+  const angle=c=>{const x=clamp(c,-TRAVEL,TRAVEL)/TRAVEL;return x>=0?x*P.down:x*P.up;};
+  const exact=d=>clamp(d>=0?d/P.down:d/P.up,-1,1)*TRAVEL; // counts, unrounded
+  const grip=(s,d)=>lb(moments(s,d).net);
+  const solve=(s,x0,unitsPerLb)=>{
+    const u=clamp(unitsPerLb,1,100000);
+    const r=rest(s,Number.isFinite(x0)?angle(x0):NaN),restCounts=exact(r),atStop=Math.abs(restCounts)>=TRAVEL-0.5;
+    const anchorLb=atStop?grip(s,r):0;
+    const x=Number.isFinite(x0)?clamp(x0,-TRAVEL,TRAVEL):restCounts;
+    let dx=x-restCounts;
+    if (Math.abs(dx)<SECANT) {
+      const side=dx>0?1:dx<0?-1:(restCounts>0?-1:1);
+      dx=side*SECANT;
+      if (Math.abs(restCounts+dx)>TRAVEL) dx=-dx;
+    }
+    const slope=(anchorLb-grip(s,angle(restCounts+dx)))/dx;
+    const want=slope*u/UNIT;
+    const centre=lround(restCounts);
+    const heldAt=strength=>lround(clamp(anchorLb*u+strength*UNIT*(restCounts-centre),-MAX_BIAS,MAX_BIAS));
+    let ceiling=driveCeiling(TRAVEL,strength=>[centre,heldAt(strength)]);
+    while (ceiling>STRONGEST_WITH_BIAS && heldAt(ceiling)!==0) ceiling--;
+    const strength=clamp(lround(clamp(want,SOFTEST,ceiling)),SOFTEST,ceiling);
+    const ks=strength*UNIT;
+    const b=anchorLb*u+ks*(restCounts-centre);
+    const held=heldAt(strength);
+    return {x,forceLb:grip(s,angle(x)),restCounts,slopeLbPerCount:slope,ceiling,strength,centre,bias:-held||0,
+      driveForceLb:(held-ks*(x-centre))/u,saturated:want>ceiling+1e-9,floored:want<SOFTEST-0.5,biasLimited:Math.abs(b)>MAX_BIAS+0.5};
+  };
+  return {P,INLB,DEG,tailQ,stiffness,tabAngle,trimFloat,moments,lb,inches,rest,step,clamp,counts,drive,solve};
+})();
+</script>
+<script id="sim">
+// The stand-in for X-Plane: a Cessna 172 in the pitch plane, flown from the
+// elevator. Built on Flight's figures so that in steady flight its wing and
+// tail angles are Flight.of's at the same speed, power and load factor; what
+// Flight lacks is in P below, each a guess at a 172's size (the page's notes).
+// State: V (m/s), gamma (flight path, rad, up positive), theta (pitch
+// attitude, rad), q (pitch rate, rad/s), h (m), t (s). Elevator angle delta is
+// the model's: radians, trailing edge down positive.
+const Aircraft=(()=>{
+  const DEG=Math.PI/180,KT=0.514444,RHO=1.225,G=9.80665;
+  const FP=Flight.P,W=FP.weight,S=FP.area,AR=Flight.AR,mass=W/G;
+  const P={inertia:1825,chord:S/FP.span,tailArea:3.28,tailSlope:3.7,cm0:-0.05,cgAft:0.08,cgFrac:0.30,plateCp:0.5,
+    cd0:0.03,cdStall:1.2,tailStall:TailAir.P.stall,tailWidth:TailAir.P.width,tailPlate:1.15};
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  const downwash=cl=>FP.downwash*2*cl/(Math.PI*AR);
+  // The tail's lift coefficient at its effective angle (its own plus tau*delta):
+  // the straight line, blending into a flat plate's past the section's stall.
+  const tailShare=a=>clamp((Math.abs(a)-P.tailStall)/P.tailWidth,0,1);
+  const tailLift=a=>{const x=tailShare(a);return (1-x)*P.tailSlope*a+x*P.tailPlate*Math.sin(2*a);};
+  // Everything at one instant.
+  const derive=(x,delta,throttle)=>{
+    const V=Math.max(x.V,5),alpha=x.theta-x.gamma,qw=.5*RHO*V*V;
+    const cl=Flight.lift(alpha),f=Flight.stalledShare(alpha),eps=downwash(cl);
+    const pitchShare=x.q*FP.tailArm/V;
+    const alphaT=alpha+FP.incidence-eps+pitchShare;                // what X-Plane reports at the tail: no deflection in it
+    const aEff=alphaT+TailAir.P.tau*delta;                         // what the tail section sees
+    const qt=Elevator.tailQ(V/KT,throttle),clt=tailLift(aEff),ownShare=tailShare(aEff);
+    const T=Flight.thrust(throttle,V);
+    const L=qw*S*cl;
+    const cd=P.cd0+(1-f)*cl*cl/(Math.PI*FP.e*AR)+f*P.cdStall*Math.sin(alpha)**2;
+    const D=qw*S*cd;
+    const cmw=(1-f)*(P.cm0+P.cgAft*cl)+f*(-(P.plateCp-P.cgFrac)*cl);
+    const Mw=qw*S*P.chord*cmw,Mt=-qt*P.tailArea*FP.tailArm*clt;
+    const n=(L+T*Math.sin(alpha))/W;
+    return {V,alpha,cl,f,eps,pitchShare,alphaT,aEff,qt,qw,clt,ownShare,T,L,D,Mw,Mt,n,
+      dV:(T*Math.cos(alpha)-D)/mass-G*Math.sin(x.gamma),
+      dGamma:(L+T*Math.sin(alpha)-W*Math.cos(x.gamma))/(mass*V),
+      dq:(Mw+Mt)/P.inertia,dh:V*Math.sin(x.gamma)};
+  };
+  // One step, midpoint rule; the elevator and throttle held over it.
+  const step=(x,delta,throttle,dt)=>{
+    const k1=derive(x,delta,throttle);
+    const mid={V:x.V+k1.dV*dt/2,gamma:x.gamma+k1.dGamma*dt/2,theta:x.theta+x.q*dt/2,q:x.q+k1.dq*dt/2,h:x.h+k1.dh*dt/2};
+    const k2=derive(mid,delta,throttle);
+    x.V=Math.max(5,x.V+k2.dV*dt);x.gamma+=k2.dGamma*dt;x.theta+=mid.q*dt;x.q+=k2.dq*dt;x.h+=k2.dh*dt;x.t+=dt;
+    return x;
+  };
+  // Level flight at kt: the wing's angle (Flight's chain), the throttle that
+  // holds the speed, the elevator that holds the nose, and the state.
+  const trim=(kt,throttleGiven)=>{
+    const V=kt*KT,qw=.5*RHO*V*V;
+    let throttle=Number.isFinite(throttleGiven)?throttleGiven:0.5,alpha=0;
+    for (let i=0;i<40;i++) {
+      const T=Flight.thrust(throttle,V);
+      alpha=clamp(FP.alpha0+(W-T*Math.sin(alpha))/(qw*S)/Flight.slope,-FP.maxAlpha,FP.maxAlpha);
+      if (!Number.isFinite(throttleGiven)) {
+        const cl=Flight.lift(alpha),f=Flight.stalledShare(alpha);
+        const D=qw*S*(P.cd0+(1-f)*cl*cl/(Math.PI*FP.e*AR)+f*P.cdStall*Math.sin(alpha)**2);
+        throttle=clamp((D/Math.cos(alpha))/Math.max(Flight.thrust(1,V),1),0,1);
+      }
+    }
+    const x={V,gamma:0,theta:alpha,q:0,h:300,t:0};                  // 1000 ft; the density stays sea level's throughout
+    // The elevator that zeroes the moment: the tail's lift the wing's moment asks for, on the straight line.
+    const d0=derive(x,0,throttle);
+    const clt=d0.Mw/(d0.qt*P.tailArea*FP.tailArm);
+    const delta=clamp((clt/P.tailSlope-d0.alphaT)/TailAir.P.tau,-Elevator.P.up,Elevator.P.down);
+    return {x,throttle,delta,alpha};
+  };
+  return {P,derive,step,trim,tailLift,tailShare,DEG,KT,G};
+})();
+// The plugin's inputs from the stand-in, as elevator.html's state() builds
+// them from Flight: the air over the tail, the trim's float, the load factor
+// for the elevator's weight, the tail's angle as X-Plane would report it, and
+// X-Plane's own tail stall flags (flight.hpp's tail_stalled_xp): here the
+// stand-in's section stall at the tail's angle alone, no deflection in it,
+// which is what X-Plane's panels would say. Both lines carry it; the model
+// takes the larger of it and the own stall's share.
+// own: the elevator's own stall on (stall_deg 13) or off (0, no surface).
+const Plugin=(()=>{
+  const E=Elevator;
+  const xplaneStalled=d=>Aircraft.tailShare(d.alphaT);
+  const state=(d,trim,own,c={})=>({q:d.qt,trim,g:d.n,unbalance:Number.isFinite(c.unbalance)?c.unbalance:30,friction:Number.isFinite(c.friction)?c.friction:1,alpha:d.alphaT,
+    stalled:xplaneStalled(d),cha:TailAir.P.cha,keep:TailAir.P.keep,kRev:TailAir.P.kRev,surface:own?{tau:TailAir.P.tau,stall:TailAir.P.stall,width:TailAir.P.width}:undefined});
+  // The trim (the model's float angle, radians) that rests the free elevator at delta: W cos d - K (d - trim) - F = 0.
+  const trimFor=(d,delta)=>{
+    const s=state(d,0,false),a=TailAir.of(s),K=E.stiffness(s.q)*a.eff,W=s.unbalance*E.INLB*s.g,F=-E.moments(s,0).float;
+    if (K<1e-9) return 0;
+    const t=delta-(W*Math.cos(delta)-F)/K;
+    return Math.max(E.trimFloat(1),Math.min(E.trimFloat(-1),t));   // within the tab's reach
+  };
+  const tabSetting=t=>{const up=E.trimFloat(1),down=E.trimFloat(-1);return t<=0?t/up:-t/down;}; // -1..1 as the page's trim wheel, nose up positive
+  // What the drive is told for the yoke at delta: solve at 222 units per lb.
+  // Forces as the model has them, forward positive: the elevator pushes the
+  // yoke forward, so the hand pulls to hold it; pull-to-hold positive.
+  const force=(d,trim,own,delta,c)=>{
+    const s=state(d,trim,own,c),r=E.solve(s,E.counts(delta),222),a=TailAir.of(s,delta);
+    return {drive:r.driveForceLb,model:r.forceLb,own:a.surface,given:s.stalled,stalled:a.stalled,eff:a.eff,effective:a.effective,rest:r.restCounts,strength:r.strength,saturated:r.saturated,
+      line:{held:-r.bias,ks:r.strength/1200,centre:r.centre,u:222},s};
+  };
+  // The drive's line, lb at the yoke counts x, forward positive: F = (held - ks*(x - centre))/u.
+  const lineForce=(line,x)=>(line.held-line.ks*(Math.max(-12000,Math.min(12000,x))-line.centre))/line.u;
+  return {state,xplaneStalled,trimFor,tabSetting,force,lineForce};
+})();
+// The manoeuvres: each starts trimmed at kt (throttle: the level-flight one
+// unless given) and scripts the pilot's hand. run(t, d, x) returns the elevator
+// angle the hand holds (rad), 'release' to let go, or null to keep holding
+// where it is. preroll: a test on the state that ends a run made before the
+// display starts, during which pre scripts the hand. Captions say what to watch.
+const Manoeuvres=(()=>{
+  const DEG=Math.PI/180,UP=Elevator.P.up,DOWN=Elevator.P.down;
+  const lerp=(a,b,t)=>a+(b-a)*Math.min(1,Math.max(0,t));
+  // A hand that holds the nose level by feel: it moves the elevator toward
+  // whatever pitch rate brings the flight path back to level, at most rate
+  // deg/s, and keeps pulling as the stalled wing lets the nose fall.
+  const levelHold=(rate=4)=>(t,d,x,ctx)=>{
+    const qWant=-2*x.gamma,dd=-3*(qWant-x.q);
+    ctx.delta=Math.max(-UP,Math.min(DOWN,ctx.delta+Math.max(-rate*DEG,Math.min(rate*DEG,dd))*ctx.dt));
+    return ctx.delta;
+  };
+  // A deflection reached over T seconds from the trim's, held until hold, then eased back to the trim's over 1 s.
+  const pullHold=(to,T,hold)=>(t,d,x,ctx)=>t<hold?lerp(ctx.delta0,to,t/T):lerp(to,ctx.delta0,(t-hold)/1.0);
+  const list=[
+    {id:'stall1g',name:'1 g stall, power off',kt:75,throttle:null,
+      caption:'From 75 kt level: power to idle, the hand holds the nose up as the speed bleeds, then holds the yoke in. Watch the wing\'s angle reach 17.3° near 53 kt at 1 g, its lift and the downwash fall, the nose drop and the airplane mush. The elevator\'s own angle stays well inside ±13° throughout.',
+      start:ctx=>{ctx.throttle=0;},run:levelHold(4)},
+    {id:'accel',name:'Accelerated stall at 90 kt',kt:90,throttle:null,
+      caption:'From 90 kt: a hard pull to 22° up in a second, held 1.5 s, then eased off. Watch the load factor pass 2.5 g and the wing stall near 88 kt, far above the 1 g stall speed: X-Plane\'s accelerated stall. The pitch rate\'s share lifts the tail\'s angle, so the elevator\'s own angle stays inside ±13°.',
+      run:pullHold(-22*DEG,1.0,2.5)},
+    {id:'yank',name:'Snatch full aft in 0.1 s at cruise',kt:110,throttle:null,
+      caption:'From 110 kt: the yoke snatched to the aft stop in a tenth of a second, about as fast as a hand can. Watch the first quarter second at ⅒ speed: the elevator\'s own angle dives toward −13° but the pitch rate\'s share lifts the tail\'s angle within hundredths of a second, so it stops near −12°, just short of the rule. The wing then stalls at about 4 g.',
+      run:pullHold(-UP,0.10,1.0)},
+    {id:'yank0',name:'Same, instantly (20 ms)',kt:110,throttle:null,
+      caption:'The same snatch in 20 ms, faster than any hand: the rule\'s upper bound. Watch at ⅒ speed: the elevator\'s own angle passes −13° before the tail can answer, the own share flickers up and the force lines part for a few hundredths of a second.',
+      run:pullHold(-UP,0.02,1.0)},
+    {id:'eased',name:'Same deflection eased in over 3 s',kt:110,throttle:null,
+      caption:'From 110 kt: the same full-aft deflection reached over 3 s. Watch the tail\'s angle climb with the deflection, so the elevator\'s own angle stays inside ±13° and the force lines lie together; the wing stalls at high g instead (an accelerated stall).',
+      run:pullHold(-UP,3.0,3.5)},
+    {id:'recover',name:'Recovery push from the stall',kt:75,throttle:null,
+      caption:'The 1 g stall, then at the break a shove to the forward stop in 0.15 s, held half a second, then back to trim. Watch the elevator\'s own angle: the tail sits near +10° in the stall, so the push adds τ·δ to it and the own share rises on the push. A push over half a second or more does not reach the rule.',
+      start:ctx=>{ctx.throttle=0;},preroll:(d,x,ctx)=>d.f>=0.5||x.t>40,pre:levelHold(4),
+      run:(t,d,x,ctx)=>{if (t<0.5) return levelHold(4)(t,d,x,ctx);if (t<1.2) return lerp(ctx.deltaAtPush??(ctx.deltaAtPush=ctx.delta),DOWN,(t-0.5)/0.15);return lerp(DOWN,ctx.delta0,(t-1.2)/1.0);}},
+    {id:'release',name:'Let go at quarter aft',kt:100,throttle:null,
+      caption:'From 100 kt: the yoke pulled a quarter aft, held 1.5 s, then let go. Watch the yoke move under the plugin\'s force alone (the model\'s free elevator) back toward its rest, and the aircraft answer. Toggle the own stall and restart to compare.',
+      run:(t,d,x,ctx)=>t<1.5?lerp(ctx.delta0,-UP/4,t/0.5):'release'},
+    {id:'free',name:'Cruise, hands off',kt:110,throttle:null,caption:'Trimmed at 110 kt with the yoke free: drag it yourself, fast or slow, and let go.',
+      run:()=>'release'},
+  ];
+  return {list,lerp,levelHold};
+})();
+// The yoke the Brunner moves: when let go it runs on the drive's line (what
+// solve told the drive, refreshed every 10 ms as the plugin would), a plain
+// mass at the grip with damping and a little friction, stops at the drive's
+// travel. Not the model's free elevator (Elevator.step, the unclipped hinge
+// moment): the real yoke never feels more than the drive's line. Figures
+// guessed: 3 kg moving mass at the grip, damping 0.6 of critical on the
+// current spring plus 5 N·s/m, 1 lb of friction.
+const Yoke=(()=>{
+  const E=Elevator,P=E.P,IN=0.0254,LB=4.44822;
+  const Y={mass:3,zeta:0.6,floorDamping:5,frictionLb:1,refresh:0.01};
+  const countsPerIn=d=>(d>=0?12000/P.down:12000/P.up)*P.gearing;        // counts per inch, by side
+  const exact=d=>Math.max(-12000,Math.min(12000,(d>=0?d/P.down:d/P.up)*12000));
+  const step=(st,line,dt)=>{
+    const x=exact(st.d),F=Plugin.lineForce(line,x)*LB;                   // N at the grip, forward positive
+    const k=line.ks/line.u*LB*countsPerIn(st.d)/IN;                      // N/m
+    const c=2*Y.zeta*Math.sqrt(Y.mass*Math.max(k,0))+Y.floorDamping,fr=Y.frictionLb*LB;
+    let v=st.w/P.gearing*IN;                                             // m/s at the grip
+    let force=F-c*v;
+    if (Math.abs(v)<1e-4) {if (Math.abs(F)<=fr) {st.w=0;return;} force-=Math.sign(F)*fr;} else force-=Math.sign(v)*fr;
+    const v0=v;v+=force/Y.mass*dt;
+    if (v0!==0&&Math.sign(v)!==Math.sign(v0)&&Math.abs(F)<=fr) v=0;
+    st.d+=v/IN*P.gearing*dt;st.w=v/IN*P.gearing;
+    if (st.d>P.down) {st.d=P.down;if (st.w>0) st.w=0;}
+    if (st.d<-P.up) {st.d=-P.up;if (st.w<0) st.w=0;}
+  };
+  return {Y,step,exact};
+})();
+// A run: the aircraft, the yoke and the plugin together, stepped at a fixed
+// 1 ms. The yoke is held at ctx.delta by a hand (the script's or the
+// pilot's) or free, moved by the drive's line (Yoke.step) from solve on the
+// plugin's state with the own stall as toggled. Samples every 20 ms of sim
+// time for the chart.
+const Run=(()=>{
+  const E=Elevator,DT=0.001,SAMPLE=0.02,WINDOW=10;
+  const make=(m,own,c={})=>{
+    const tr=Aircraft.trim(m.kt,Number.isFinite(m.throttle)?m.throttle:NaN);
+    const d0=Aircraft.derive(tr.x,tr.delta,tr.throttle);
+    const trim=Plugin.trimFor(d0,tr.delta);
+    const r={m,own,c,x:tr.x,throttle:tr.throttle,trim,delta0:tr.delta,st:{d:tr.delta,w:0},ctx:{delta:tr.delta,delta0:tr.delta,dt:DT,throttle:tr.throttle},
+      hand:'script',prerolling:false,shown:0,samples:[],nextSample:0,line:null,lineAt:0};
+    if (m.start) m.start(r.ctx);
+    r.throttle=r.ctx.throttle;
+    return r;
+  };
+  const sample=r=>{
+    const d=Aircraft.derive(r.x,r.st.d,r.throttle);
+    const on=Plugin.force(d,r.trim,true,r.st.d,r.c),off=Plugin.force(d,r.trim,false,r.st.d,r.c);
+    const s={t:r.x.t-r.shown,yoke:E.inches(r.st.d),delta:r.st.d,aEff:d.aEff,alphaW:d.alpha,n:d.n,kt:d.V/Aircraft.KT,alphaT:d.alphaT,
+      wing:d.f,own:on.own,fOn:on.drive,fOff:off.drive,mOn:on.model,mOff:off.model,held:r.hand!=='free',theta:r.x.theta,gamma:r.x.gamma,h:r.x.h,q:r.x.q};
+    r.samples.push(s);
+    while (r.samples.length && r.samples[0].t<s.t-WINDOW-SAMPLE) r.samples.shift();
+    return s;
+  };
+  // Advance by seconds of sim time.
+  const advance=(r,seconds)=>{
+    let left=seconds;
+    while (left>1e-9) {
+      const dt=Math.min(DT,left);left-=dt;
+      const d=Aircraft.derive(r.x,r.st.d,r.throttle);
+      if (r.hand==='script') {
+        const t=r.x.t-r.shown;r.ctx.dt=dt;
+        const fn=r.prerolling?r.m.pre:r.m.run,want=fn?fn(t,d,r.x,r.ctx):'release';
+        if (want==='release') {r.hand='free';r.st.w=0;}
+        else if (want===null) r.hand='held';
+        else {r.ctx.delta=want;r.st.d=want;r.st.w=0;}
+      }
+      if (r.hand==='free') {
+        if (!r.line||r.x.t>=r.lineAt+Yoke.Y.refresh-1e-9) {r.line=Plugin.force(d,r.trim,r.own,r.st.d,r.c).line;r.lineAt=r.x.t;}
+        Yoke.step(r.st,r.line,dt);
+      } else {r.st.w=0;r.line=null;}
+      r.throttle=r.ctx.throttle;
+      Aircraft.step(r.x,r.st.d,r.throttle,dt);
+      if (r.x.t>=r.nextSample-1e-9) {sample(r);r.nextSample+=SAMPLE;}
+    }
+  };
+  // The preroll: run before the display starts, with the chart filled.
+  const preroll=r=>{
+    const p=r.m.preroll;if (!p) {sample(r);return;}
+    r.prerolling=true;
+    for (let i=0;i<60000;i++) {advance(r,DT);const d=Aircraft.derive(r.x,r.st.d,r.throttle);if (p(d,r.x,r.ctx)) break;}
+    r.prerolling=false;r.shown=r.x.t;for (const s of r.samples) s.t-=r.shown;
+  };
+  const start=(m,own,c)=>{const r=make(m,own,c);preroll(r);return r;};
+  return {make,start,advance,sample,DT,SAMPLE,WINDOW};
+})();
+</script>
+<script>
+const E=Elevator,P=E.P,DEG=E.DEG,KT=Aircraft.KT;
+const $=id=>document.getElementById(id);
+const ns='http://www.w3.org/2000/svg';
+const el=(tag,attrs={},parent)=>{const e=document.createElementNS(ns,tag);for (const k in attrs) e.setAttribute(k,attrs[k]);if (parent) parent.appendChild(e);return e;};
+const fmt=(v,n=1)=>(Math.abs(v)<.05&&n<=1?0:v).toFixed(n);
+const sgn=(v,n=1)=>{const t=fmt(v,n);return +t===0?'0°':(v>0?'+':'−')+Math.abs(v).toFixed(n)+'°';};
+const share=x=>`${(x*100).toFixed(0)}%`;
+const lbs=v=>Math.abs(v)<.05?'0 lb':(v>0?'pull ':'push ')+Math.abs(v).toFixed(1)+' lb';
+
+// ---- the run ----
+let own=true,run=null,paused=false,speed=1,dragging=false;
+const current=()=>Manoeuvres.list.find(m=>m.id===(run?run.m.id:'free'));
+const startRun=m=>{run=Run.start(m,own);$('presetcap').textContent=m.caption;
+  for (const b of $('presets').children) b.classList.toggle('on',b.dataset.id===m.id);
+  setHoldButton();};
+for (const m of Manoeuvres.list) {const b=document.createElement('button');b.textContent=m.name;b.dataset.id=m.id;b.onclick=()=>{paused=false;setPause();startRun(m);};$('presets').append(b);}
+const setOwn=v=>{own=v;$('own').textContent=`Elevator's own stall: ${v?'on (13°)':'off (0)'}`;$('own').classList.toggle('on',v);if (run) run.own=v;};
+$('own').onclick=()=>setOwn(!own);
+$('restart').onclick=()=>startRun(run.m);
+const setPause=()=>{$('pause').textContent=paused?'Play':'Pause';$('pause').classList.toggle('on',paused);};
+$('pause').onclick=()=>{paused=!paused;setPause();};
+const setSpeed=v=>{speed=v;$('slow').classList.toggle('on',v===0.25);$('slower').classList.toggle('on',v===0.1);};
+$('slow').onclick=()=>setSpeed(speed===0.25?1:0.25);
+$('slower').onclick=()=>setSpeed(speed===0.1?1:0.1);
+$('zoom').onclick=()=>{windowS=windows[(windows.indexOf(windowS)+1)%windows.length];$('zoom').textContent=`Window: ${windowS} s`;$('striph').textContent=windowS>=10?'The last ten seconds':`The last ${windowS} s`;};
+// The hand: the script's, the pilot's (dragging or held), or none.
+const setHoldButton=()=>{const h=run.hand!=='free';$('hold').textContent=h?'Let go':'Hold it here';$('hold').classList.toggle('on',h);};
+$('hold').onclick=()=>{if (run.hand==='free') {run.hand='held';run.ctx.delta=run.st.d;run.st.w=0;} else {run.hand='free';run.st.w=0;} setHoldButton();};
+setOwn(true);setSpeed(1);setPause();
+startRun(Manoeuvres.list.find(m=>m.id==='free'));
+
+// ---- aircraft drawing ----
+const A=$('plane');
+const horizon=el('line',{x1:0,x2:800,y1:150,y2:150,stroke:'#2c333b','stroke-width':2,'stroke-dasharray':'10 8'},A);
+el('text',{x:12,y:142},A).textContent='horizon';
+const altText=el('text',{x:12,y:30},A),spdText=el('text',{x:12,y:60},A),attText=el('text',{x:12,y:90},A);
+const streaks=el('g',{},A);
+const slines=[];for (let i=0;i<16;i++) slines.push(el('line',{stroke:'#3a4450','stroke-width':2,'stroke-linecap':'round'},streaks));
+const soffs=slines.map((_,i)=>({u:(i*137)%800-400,v:((i*53)%260)-130}));
+const body=el('g',{},A);const cx=430,cy=150;
+// fuselage, nose to the right; wing at mid; tail at the left
+el('path',{d:'M-210,-6 L-60,-16 L120,-22 L170,-16 L190,-4 L190,8 L150,20 L-60,14 L-210,6 Z',fill:'#39424d',stroke:'#56606b'},body);
+el('path',{d:'M-205,-6 L-150,-58 L-130,-58 L-175,-6 Z',fill:'#39424d',stroke:'#56606b'},body); // fin
+const wing=el('g',{transform:'translate(20,-26)'},body);
+el('path',{d:'M-70,0 C-40,-14 40,-16 80,-4 Q86,0 80,4 C40,10 -40,10 -70,2 Z',fill:'#5b6672',stroke:'#7a8591'},wing);
+const wingStall=el('path',{d:'M-70,0 C-40,-14 40,-16 80,-4 Q86,0 80,4 C40,10 -40,10 -70,2 Z',fill:'var(--red)',opacity:0},wing);
+const stab=el('g',{transform:'translate(-150,-2)'},body);
+el('path',{d:'M0,-5 C20,-9 50,-9 70,-2 Q74,0 70,2 C50,6 20,6 0,5 Z',fill:'#39424d',stroke:'#56606b'},stab);
+const elev=el('g',{},stab);
+el('path',{d:'M0,-5 L-62,-1.5 L-62,1.5 L0,5 Z',fill:'var(--amber)',stroke:'#7a8591'},elev);
+const elevStall=el('path',{d:'M0,-5 L-62,-1.5 L-62,1.5 L0,5 Z',fill:'var(--own)',opacity:0},elev);
+const windArrow=(()=>{const g=el('g',{},A);const l=el('line',{stroke:'var(--blue)','stroke-width':5,'stroke-linecap':'round'},g);const h=el('path',{fill:'var(--blue)'},g);return {g,l,h};})();
+const setArrow=(a,x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy);const ux=dx/L,uy=dy/L,hx=x2-ux*16,hy=y2-uy*16;
+  a.l.setAttribute('x1',x1);a.l.setAttribute('y1',y1);a.l.setAttribute('x2',hx);a.l.setAttribute('y2',hy);
+  a.h.setAttribute('d',`M${x2},${y2} L${hx-uy*9},${hy+ux*9} L${hx+uy*9},${hy-ux*9} Z`);};
+const flagText=el('text',{x:788,y:288,'text-anchor':'end',style:'fill:var(--red);font-weight:600'},A);
+const windText=el('text',{x:788,y:30,'text-anchor':'end'},A);
+
+// ---- yoke drawing (elevator.html's) ----
+const Y=$('yoke');
+const yAft=-E.inches(P.up),yFwd=E.inches(P.down);
+const yx=i=>90+(i-yAft)/(yFwd-yAft)*560;
+el('rect',{x:700,y:20,width:16,height:120,fill:'#39424d'},Y);
+el('text',{x:708,y:14,'text-anchor':'middle'},Y).textContent='panel';
+el('line',{x1:yx(yAft),y1:80,x2:yx(yFwd),y2:80,stroke:'#2c333b','stroke-width':2},Y);
+for (const [i,t] of [[yAft,'aft stop'],[0,'neutral'],[yFwd,'forward stop']]) {
+  el('line',{x1:yx(i),y1:66,x2:yx(i),y2:94,stroke:'#56606b','stroke-width':2},Y);
+  el('text',{x:yx(i),y:146,'text-anchor':'middle'},Y).textContent=t;
+}
+const shaft=el('line',{y1:80,y2:80,x2:700,stroke:'#7a8591','stroke-width':10},Y);
+const restMark=el('path',{d:'M0,152 L-10,168 L10,168 Z',fill:'var(--amber)','pointer-events':'none'},Y);
+const trimMark=el('path',{d:'M0,152 L-8,166 L8,166 Z',fill:'none',stroke:'var(--tab)','stroke-width':2,'pointer-events':'none'},Y);
+const wheel=el('g',{class:'hand'},Y);
+el('rect',{x:-9,y:36,width:18,height:88,rx:8,fill:'#c9d0d6'},wheel);
+el('rect',{x:-40,y:16,width:80,height:128,fill:'transparent'},wheel);
+const yArrow={g:el('g',{'pointer-events':'none'},Y)};yArrow.l=el('line',{stroke:'var(--amber)','stroke-width':5,'stroke-linecap':'round'},yArrow.g);yArrow.h=el('path',{fill:'var(--amber)'},yArrow.g);
+const yArrowOff={g:el('g',{'pointer-events':'none',opacity:.6},Y)};yArrowOff.l=el('line',{stroke:'var(--off)','stroke-width':3,'stroke-dasharray':'6 4'},yArrowOff.g);yArrowOff.h=el('path',{fill:'var(--off)'},yArrowOff.g);
+const yText=el('text',{x:20,y:24,class:'dup','pointer-events':'none'},Y);
+const pointer=e=>{const r=Y.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*800;return E.clamp(yAft+(x-90)/560*(yFwd-yAft),yAft,yFwd);};
+const grab=e=>{dragging=true;wheel.setPointerCapture(e.pointerId);run.hand='held';run.ctx.delta=run.st.d=pointer(e)*P.gearing;run.st.w=0;setHoldButton();};
+wheel.addEventListener('pointerdown',grab);
+wheel.addEventListener('pointermove',e=>{if (dragging) {run.ctx.delta=run.st.d=pointer(e)*P.gearing;run.st.w=0;}});
+const release=()=>{if (!dragging) return;dragging=false;run.hand='free';run.st.w=0;setHoldButton();};
+wheel.addEventListener('pointerup',release);wheel.addEventListener('pointercancel',release);
+wheel.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+// The track too: tap or drag anywhere along it.
+Y.addEventListener('pointerdown',e=>{if (e.target===wheel||wheel.contains(e.target)) return;grab(e);});
+Y.addEventListener('pointermove',e=>{if (dragging) {run.ctx.delta=run.st.d=pointer(e)*P.gearing;run.st.w=0;}});
+Y.addEventListener('pointerup',release);Y.addEventListener('pointercancel',release);
+// No keyboard: a key pressed anywhere must not move the yoke or let it go.
+
+// ---- strip chart ----
+const S=$('strip');const sg=el('g',{},S);
+const W=640,H=1030,padL=64,padR=56;
+const panels=[
+  {key:'yoke',title:'Yoke, inches: forward +',lo:yAft-0.2,hi:yFwd+0.2,h:100},
+  {key:'aEff',title:'Elevator\'s own angle α_t+τδ, °: the plugin\'s own-stall rule',lo:-32,hi:32,h:150},
+  {key:'alphaW',title:'Wing\'s angle, °: the stall is X-Plane\'s',lo:-5,hi:28,h:130},
+  {key:'nkt',title:'Load factor (amber, left) and airspeed (green, right)',lo:-0.5,hi:4.5,h:130},
+  {key:'shares',title:'Stalled shares: wing (X-Plane\'s), elevator\'s own (the plugin\'s)',lo:0,hi:1,h:110},
+  {key:'force',title:'Yoke force, lb, pull +: own stall on and off',lo:-20,hi:20,h:220},
+];
+let y0=28;for (const p of panels) {p.top=y0;p.bot=y0+p.h;y0+=p.h+38;}
+let windowS=10;const windows=[10,2,0.5];
+const path=pts=>pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join('');
+function drawStrip(samples) {
+  sg.innerHTML='';
+  const tEnd=samples.length?samples[samples.length-1].t:0,t0=tEnd-windowS;
+  samples=samples.filter(s=>s.t>=t0-Run.SAMPLE);
+  const X=t=>padL+(t-t0)/windowS*(W-padL-padR);
+  const fRange=Math.max(20,...samples.map(s=>Math.max(Math.abs(s.fOn),Math.abs(s.fOff),Math.min(60,Math.abs(s.mOn)),Math.min(60,Math.abs(s.mOff)))));
+  panels[5].lo=-Math.ceil(fRange/10)*10;panels[5].hi=-panels[5].lo;
+  const nMax=Math.max(4.5,...samples.map(s=>s.n));panels[3].hi=Math.ceil(nMax);
+  const ktLo=30,ktHi=Math.max(130,Math.ceil(Math.max(...samples.map(s=>s.kt),130)/10)*10);
+  for (const p of panels) {
+    const Yv=v=>p.top+(p.hi-Math.max(p.lo,Math.min(p.hi,v)))/(p.hi-p.lo)*(p.bot-p.top);p.Y=Yv;
+    el('rect',{x:padL,y:p.top,width:W-padL-padR,height:p.h,fill:'#171b20',stroke:'#2c333b'},sg);
+    el('text',{x:padL+6,y:p.top-6,'font-size':14},sg).textContent=p.title;
+    const line=(v,color='#2c333b',dash='',label=v)=>{el('line',{x1:padL,x2:W-padR,y1:Yv(v),y2:Yv(v),stroke:color,'stroke-dasharray':dash},sg);
+      el('text',{x:padL-6,y:Yv(v)+5,'text-anchor':'end','font-size':14},sg).textContent=label;};
+    const seg=(key,color,width=3,extra={})=>{const pts=[];let cur=[];const out=[];
+      for (const s of samples) {const v=typeof key==='function'?key(s):s[key];if (!Number.isFinite(v)) {if (cur.length) out.push(cur);cur=[];continue;}cur.push([X(s.t),Yv(v)]);}
+      if (cur.length) out.push(cur);for (const c of out) el('path',{d:path(c),fill:'none',stroke:color,'stroke-width':width,...extra},sg);};
+    const runs=test=>{const out=[];let a=null;for (const s of samples) {if (test(s)) {if (a===null) a=s.t;} else if (a!==null) {out.push([a,s.t]);a=null;}}if (a!==null) out.push([a,tEnd]);return out;};
+    const shade=(test,color,op=.18)=>{for (const [a,b] of runs(test)) el('rect',{x:X(a),y:p.top,width:Math.max(1.5,X(b)-X(a)),height:p.h,fill:color,opacity:op},sg);};
+    if (p.key==='yoke') {
+      line(0,'#56606b','', 'neutral');line(yAft,'#2c333b','','aft');line(yFwd,'#2c333b','','fwd');
+      shade(s=>!s.held,'#ffffff',.05);
+      seg('yoke','var(--amber)');
+      el('text',{x:W-padR-4,y:p.top+16,'text-anchor':'end','font-size':13},sg).textContent='light: yoke free';
+    } else if (p.key==='aEff') {
+      const st=TailAir.P.stall/DEG,wd=TailAir.P.width/DEG;
+      for (const sgn_ of [1,-1]) el('rect',{x:padL,y:Math.min(Yv(sgn_*st),Yv(sgn_*(st+wd))),width:W-padL-padR,height:Math.abs(Yv(sgn_*st)-Yv(sgn_*(st+wd))),fill:'var(--own)',opacity:.15},sg);
+      line(0,'#56606b');line(st,'var(--own)','5 6','+13°');line(-st,'var(--own)','5 6','−13°');line(st+wd,'var(--own)','2 6','');line(-st-wd,'var(--own)','2 6','');
+      el('text',{x:W-padR-4,y:Yv(st+wd)-4,'text-anchor':'end','font-size':12},sg).textContent='stalled fully at ±17°';
+      shade(s=>s.own>0,'var(--own)',.12);
+      seg(s=>s.alphaT/DEG,'var(--blue)',2,{'stroke-dasharray':'4 4'});
+      seg(s=>s.aEff/DEG,'var(--own)');
+      el('text',{x:W-padR-4,y:p.top+16,'text-anchor':'end','font-size':13},sg).textContent='dashed blue: tail angle alone';
+    } else if (p.key==='alphaW') {
+      const cr=Flight.critical/DEG;
+      line(0,'#56606b');line(cr,'var(--red)','5 6',fmt(cr,1)+'°');line(cr+4,'var(--red)','2 6',fmt(cr+4,1)+'°');line(10,'#2c333b','','10°');
+      el('rect',{x:padL,y:Yv(cr+4),width:W-padL-padR,height:Yv(cr)-Yv(cr+4),fill:'var(--red)',opacity:.15},sg);
+      shade(s=>s.wing>0,'var(--red)',.12);
+      seg(s=>s.alphaW/DEG,'var(--weight)');
+    } else if (p.key==='nkt') {
+      for (const v of [0,1,2,3,4]) if (v<=p.hi) line(v,v===1?'#56606b':'#2c333b','',v+' g');
+      const Yk=k=>p.top+(ktHi-Math.max(ktLo,Math.min(ktHi,k)))/(ktHi-ktLo)*p.h;
+      for (const k of [50,70,90,110,130]) if (k<=ktHi) el('text',{x:W-padR+6,y:Yk(k)+5,'font-size':14,fill:'var(--green)'},sg).textContent=k+' kt';
+      el('line',{x1:padL,x2:W-padR,y1:Yk(Flight.P.stallKt),y2:Yk(Flight.P.stallKt),stroke:'var(--green)','stroke-dasharray':'2 6',opacity:.6},sg);
+      shade(s=>s.wing>0,'var(--red)',.12);
+      const pts=samples.map(s=>[X(s.t),Yk(s.kt)]);if (pts.length) el('path',{d:path(pts),fill:'none',stroke:'var(--green)','stroke-width':3},sg);
+      seg('n','var(--amber)');
+    } else if (p.key==='shares') {
+      line(0,'#56606b','','0');line(1,'#2c333b','','all');line(0.5,'#2c333b','3 6','half');
+      seg('wing','var(--red)');seg('own','var(--own)');
+    } else if (p.key==='force') {
+      line(0,'#56606b','','0');for (const v of [p.lo/2,p.hi/2,p.lo,p.hi]) line(v,'#2c333b','',v+'');
+      shade(s=>s.own>0,'var(--own)',.12);shade(s=>s.wing>0,'var(--red)',.08);
+      seg('mOff','var(--off)',1.5,{'stroke-dasharray':'3 3'});seg('mOn','var(--own)',1.5,{'stroke-dasharray':'3 3'});
+      seg('fOff','var(--off)',4);seg('fOn','var(--own)',3);
+    }
+  }
+  const tick=windowS>=10?1:windowS>=2?0.25:0.05,dp=windowS>=10?0:2;
+  for (let t=Math.ceil(t0/tick)*tick;t<=tEnd+1e-9;t+=tick) {const x=X(t);el('line',{x1:x,x2:x,y1:panels[0].top,y2:panels[panels.length-1].bot,stroke:'#ffffff',opacity:.05},sg);
+    el('text',{x,y:H-6,'text-anchor':'middle','font-size':14},sg).textContent=t.toFixed(dp)+' s';}
+}
+
+// ---- readouts ----
+const kv=(box,rows)=>{box.innerHTML='';for (const [k,v] of rows) {const a=document.createElement('span');a.textContent=k;const b=document.createElement('b');b.textContent=v;box.append(a,b);}};
+const travel=d=>{const i=E.inches(d);return Math.abs(i)<.02?'neutral':(Math.abs(i)/(i>0?yFwd:-yAft)*100).toFixed(0)+'% '+(i>0?'forward':'aft');};
+const elevText=d=>Math.abs(d/DEG)<.05?'neutral':`${Math.abs(d/DEG).toFixed(1)}° ${d>0?'down':'up'}`;
+function readouts(d,on,off) {
+  const x=run.x;
+  kv($('read'),[
+    ['Airspeed',`${(d.V/KT).toFixed(0)} kt`],
+    ['Altitude',`${(x.h/0.3048).toFixed(0)} ft, ${(x.gamma/DEG).toFixed(1)}° path`],
+    ['Pitch attitude',sgn(x.theta/DEG)],
+    ['Wing angle',`${sgn(d.alpha/DEG)} (stalls at ${fmt(Flight.critical/DEG,1)}°)`],
+    ['Wing stalled (X-Plane\'s)',d.f>0?`${share(d.f)}: buffet`:'no'],
+    ['Lift, load factor',`C_L ${d.cl.toFixed(2)}, ${d.n.toFixed(2)} g`],
+    ['Pitch rate',`${fmt(x.q/DEG,1)}°/s: ${sgn(d.pitchShare/DEG)} at the tail`],
+    ['Downwash',`${fmt(d.eps/DEG,1)}°`],
+    ['Tail angle (reported)',sgn(d.alphaT/DEG)],
+    ['Elevator',`${elevText(run.st.d)}, yoke ${travel(run.st.d)}`],
+    ['Elevator\'s own angle α_t+τδ',`${sgn(d.aEff/DEG)} (rule: ±${fmt(TailAir.P.stall/DEG,0)}°)`],
+    ['Tail stalled, X-Plane\'s flags (both lines)',on.given>0?share(on.given):'no'],
+    ['Own stall share (the plugin\'s rule)',on.own>0?`${share(on.own)}: the air's moments at ${share(on.eff)}`:'none'],
+    ['Throttle',`${(run.throttle*100).toFixed(0)}%`],
+    ['Trim tab',`${(Math.abs(Plugin.tabSetting(run.trim))*100).toFixed(0)}% ${Plugin.tabSetting(run.trim)>0?'nose up':'nose down'}`],
+    ['Hand',run.hand==='script'?'the script\'s':run.hand==='held'?'yours, holding':'none: the yoke is free'],
+  ]);
+  kv($('told'),[
+    ['Force at the yoke, model, own stall on',lbs(on.model)],
+    ['Force at the yoke, model, own stall off',lbs(off.model)],
+    ['Force the drive is told, own stall on',lbs(on.drive)+(on.saturated?' (at the drive\'s ceiling)':'')],
+    ['Force the drive is told, own stall off',lbs(off.drive)+(off.saturated?' (at the drive\'s ceiling)':'')],
+    ['Difference, drive, on − off',`${(on.drive-off.drive).toFixed(1)} lb`],
+    ['Rests at, own stall on / off',`${travel(E.rest(on.s,run.st.d))} / ${travel(E.rest(off.s,run.st.d))}`],
+    ['Spring strength sent, on / off',`${on.strength}% / ${off.strength}%`],
+  ]);
+}
+
+// ---- loop ----
+let last=performance.now(),tick=0,acc=0;
+function frame(now) {
+  const real=Math.min(.1,(now-last)/1000);last=now;
+  if (!paused) {acc+=real*speed;const chunk=Math.min(acc,0.25);if (chunk>0) {Run.advance(run,chunk);acc-=chunk;}}
+  const d=Aircraft.derive(run.x,run.st.d,run.throttle);
+  const on=Plugin.force(d,run.trim,true,run.st.d,run.c),off=Plugin.force(d,run.trim,false,run.st.d,run.c);
+  const x=run.x;
+  // aircraft
+  body.setAttribute('transform',`translate(${cx},${cy}) rotate(${-x.theta/DEG})`);
+  elev.setAttribute('transform',`rotate(${-run.st.d/DEG})`);
+  wingStall.setAttribute('opacity',(d.f*.75).toFixed(2));
+  elevStall.setAttribute('opacity',(on.own*.9).toFixed(2));
+  const ux=-Math.cos(x.gamma),uy=Math.sin(x.gamma);                 // the air's direction on screen: from ahead along the path
+  setArrow(windArrow,cx+300*-ux,cy+300*-uy,cx+150*-ux,cy+150*-uy);
+  const vt=d.V;
+  slines.forEach((l,i)=>{const o=soffs[i];o.u+=vt*real*speed*12;if (o.u>420) o.u-=840;
+    const L=Math.min(60,vt*1.1);const px=cx+o.u*ux-o.v*uy,py=cy+o.u*uy+o.v*ux;
+    l.setAttribute('x1',px);l.setAttribute('y1',py);l.setAttribute('x2',px+ux*L);l.setAttribute('y2',py+uy*L);l.setAttribute('opacity',(.9*(1-.6*d.f)).toFixed(2));});
+  altText.textContent=`${(x.h/0.3048).toFixed(0)} ft, ${(x.gamma/DEG).toFixed(0)}° path`;
+  spdText.textContent=`${(d.V/KT).toFixed(0)} kt, ${d.n.toFixed(2)} g`;
+  attText.textContent=`pitch ${sgn(x.theta/DEG,0)}, wing ${sgn(d.alpha/DEG,0)}`;
+  windText.textContent=`tail ${sgn(d.alphaT/DEG,0)}, elevator's own ${sgn(d.aEff/DEG,0)}`;
+  const flags=[];if (d.f>0) flags.push(`WING STALL ${share(d.f)} (X-Plane's)`);if (on.own>0) flags.push(`ELEVATOR'S OWN STALL ${share(on.own)}`);
+  flagText.textContent=flags.join(' · ');
+  // yoke
+  const yi=E.inches(run.st.d),xw=yx(yi);
+  wheel.setAttribute('transform',`translate(${xw},0)`);shaft.setAttribute('x1',xw);
+  restMark.setAttribute('transform',`translate(${yx(E.inches(E.rest(own?on.s:off.s,run.st.d)))},0)`);
+  trimMark.setAttribute('transform',`translate(${yx(E.inches(E.clamp(run.trim,-P.up,P.down)))},0)`);
+  const arrow=(a,f)=>{const fl=Math.max(-150,Math.min(150,f*8));a.g.style.display=Math.abs(fl)<4?'none':'';
+    if (Math.abs(fl)>=4) {const y=80,x2=xw+fl,u=Math.sign(fl),hx=x2-u*16;a.l.setAttribute('x1',xw);a.l.setAttribute('y1',y);a.l.setAttribute('x2',hx);a.l.setAttribute('y2',y);a.h.setAttribute('d',`M${x2},${y} L${hx},${y-9} L${hx},${y+9} Z`);}};
+  arrow(yArrow,own?on.drive:off.drive);arrow(yArrowOff,own?off.drive:on.drive);
+  yText.textContent=`Drive, own stall ${own?'on':'off'}: ${lbs(own?on.drive:off.drive)} · ${own?'off':'on'}: ${lbs(own?off.drive:on.drive)} · model ${lbs(own?on.model:off.model)}`;
+  $('time').textContent=`t ${Math.max(0,x.t-run.shown).toFixed(2)} s${speed<1?` at ${speed===0.25?'¼':'⅒'}`:''}${paused?', paused':''}`;
+  if ((tick++%3)===0) {drawStrip(run.samples);readouts(d,on,off);
+    $('live').textContent=`${(d.V/KT).toFixed(0)} kt · ${d.n.toFixed(1)} g · wing ${sgn(d.alpha/DEG,0)}${d.f>0?' STALLED '+share(d.f):''} · own ${sgn(d.aEff/DEG,0)}${on.own>0?' STALLED '+share(on.own):''} · drive on ${lbs(on.drive)}, off ${lbs(off.drive)}`;}
+  if (run.hand!=='script'&&!dragging) setHoldButton();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
