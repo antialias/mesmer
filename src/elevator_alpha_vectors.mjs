@@ -167,6 +167,9 @@ const chainCases=[
   ['accelerated, just short of the break',{kt:75,throttle:0.6,n:1.9},0.15],
   ['sudden full-aft pull in cruise',{kt:110,throttle:0.75,n:1,pitchRate:20},0.15],
   ['deep in the stall: the angle held at its cap',{kt:35,throttle:0,n:1},0.3],
+  ['too slow to fly: 20 kt at cruise power',{kt:20,throttle:0.75,n:1},0.15],
+  ['flying with no airspeed, cruise power',{kt:0,throttle:0.75,n:1},0.15],
+  ['flying with no airspeed, engine off',{kt:0,throttle:0,n:1},0.15],
 ];
 const chainState=(f,trim)=>({q:f.q,trim:E.trimFloat(trim),g:f.n,unbalance:30,alpha:f.reported,
   surface:{tau:T.P.tau,stall:T.P.stall,width:T.P.width}});
@@ -302,6 +305,34 @@ close(Fl.of({kt:53,throttle:0,n:1}).alphaW/DEG,Fl.critical/DEG,1e-6,'the wing mu
 if (!(Fl.of({kt:53.2,throttle:0,n:1}).wingStalled===0&&Fl.of({kt:52.8,throttle:0,n:1}).wingStalled>0)) fail('the 1 g stall must come at 53 KCAS');
 {const e=a=>2*Fl.P.downwash*Fl.lift(a)/(Math.PI*Fl.AR),slope=(e(6*DEG)-e(2*DEG))/(4*DEG);
   if (!(slope>=0.4&&slope<=0.45)) fail(`dε/dα ${slope} must be within 0.4..0.45`);}
+// Slower than it can fly (Flight.P.minKt): the chain's answer at minKt, fading
+// into the aircraft with no airspeed. The flight path's rate once grew without
+// limit there, the tail's angle wrapped past ±90° and the elevator ran to a
+// stop as if the air came from behind. Flying, the air never comes from
+// behind, the angle never jumps, and with no airspeed the tail has the wash
+// alone, as on its wheels.
+{const still=ch('flying with no airspeed, cruise power'),wheels=Fl.of({kt:0,throttle:0.75,ground:true});
+  close(still.tail_alpha_deg,wheels.alphaT/DEG,1e-9,'flying with no airspeed, the tail\'s angle must be the wash\'s, as on its wheels');
+  close(still.load_factor,1,1e-12,'flying with no airspeed, the load factor');
+  close(still.tail_pa,wheels.q,1e-6,'flying with no airspeed, the air over the tail must be the wash\'s');
+  if (!(still.rest_counts>0&&still.rest_counts<0.25*TRAVEL)) fail(`in the wash alone the elevator must rest a little below neutral, not at ${still.rest_counts} counts`);
+  if (ch('flying with no airspeed, engine off').rest_counts<TRAVEL) fail('with no air over the tail the weight must take the yoke to the forward stop');
+  const slow=ch('too slow to fly: 20 kt at cruise power'),floor=Fl.of({kt:Fl.P.minKt,throttle:0.75,n:1});
+  if (!(slow.tail_alpha_deg>still.tail_alpha_deg&&slow.tail_alpha_deg<floor.alphaT/DEG)) fail('under minKt the tail\'s angle must lie between the wash\'s and minKt\'s');
+  if (!(slow.load_factor>floor.n&&slow.load_factor<1)) fail('under minKt the load factor must lie between minKt\'s and 1');
+  for (const throttle of [0,0.15,0.55,0.75,1]) for (const n of [0.5,1,2,3.5]) for (const pitchRate of [-10,0,40]) {
+    const c={throttle,n,pitchRate},at=kt=>Fl.of({...c,kt}),what=kt=>`flying at ${kt} kt, ${JSON.stringify(c)}`;
+    close(at(Fl.P.minKt-1e-9).reported,at(Fl.P.minKt).reported,1e-6,`${what(Fl.P.minKt)}: the fade must meet the chain at minKt`);
+    let last=null;
+    for (let kt=0;kt<=140;kt+=0.5) {
+      const f=at(kt),a=f.reported/DEG;
+      if (!(Number.isFinite(a)&&Number.isFinite(f.n)&&Number.isFinite(f.q))) fail(`${what(kt)}: not finite`);
+      if (!(Math.abs(a)<=T.P.alphaClamp/DEG)) fail(`${what(kt)}: the tail's angle is ${a}°, past the clamp`);
+      if (T.of({q:f.q,alpha:f.reported}).reversed) fail(`${what(kt)}: flying, the air must not come from behind`);
+      if (last!==null&&!(Math.abs(a-last)<=2)) fail(`${what(kt)}: the tail's angle steps ${a-last}° in half a knot`);
+      last=a;
+    }
+  }}
 for (const n of ['no angle on a panel with air: empty','no stall flag on a panel with air: empty','no speed on a panel: empty','no density: empty','a non-finite density: empty'])
   if (pb(n).tail_pa!==null) fail(`${n}: must be empty`);
 if (pb('no angle or flag on a panel under the gate: accepted').alpha_deg!==8) fail('a non-finite value under the gate must be accepted');

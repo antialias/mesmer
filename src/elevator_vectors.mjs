@@ -4,10 +4,11 @@
 // same file: the model's outputs per case, and the drive's registers for the
 // yoke at x0 (null: at the model's rest).
 // The feel page, workbench.html, and the stall simulator, stall.html, carry
-// identical copies of the block; this checks them.
+// identical copies of the block, and so does the website's live demo
+// (public/site/www/js/elevator-model.js); this checks them.
 //   node elevator_vectors.mjs          check elevator_vectors.json against the page
 //   node elevator_vectors.mjs --write  regenerate it after changing the model
-import {readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 
@@ -26,6 +27,20 @@ for (const name of ['workbench.html','stall.html']) {
   if (copy[1]!==found[1]) {
     const a=found[1].split('\n'),b=copy[1].split('\n');let i=0;while (i<a.length && a[i]===b[i]) i++;
     console.error(`${name}'s model differs from elevator.html's at model line ${i+1}:\n  elevator.html:  ${a[i]??'(end)'}\n  ${name}: ${b[i]??'(end)'}\nCopy elevator.html's <script id="model"> block into ${name}.`);
+    process.exit(1);
+  }
+}
+// mesmer.haunt.house's live demo runs the same block as a plain script,
+// public/site/www/js/elevator-model.js, byte for byte. The site stays in
+// flightsim (the public manifest leaves it out), so where public/site is
+// absent there is nothing to check.
+if (existsSync(join(here,'public','site'))) {
+  const site=join(here,'public','site','www','js','elevator-model.js');
+  const copy=existsSync(site)?readFileSync(site,'utf8'):null;
+  if (copy!==found[1]) {
+    const a=found[1].split('\n'),b=(copy??'').split('\n');let i=0;while (i<a.length && a[i]===b[i]) i++;
+    console.error(copy===null?`${site} is missing.`:`the site's elevator-model.js differs from elevator.html's model at model line ${i+1}:\n  elevator.html:     ${a[i]??'(end)'}\n  elevator-model.js: ${b[i]??'(end)'}`);
+    console.error('Write elevator.html\'s <script id="model"> block, exactly, to public/site/www/js/elevator-model.js.');
     process.exit(1);
   }
 }
@@ -96,4 +111,4 @@ if (process.argv.includes('--write')) {writeFileSync(file,text);console.log(`wro
 else if (readFileSync(file,'utf8')!==text) {
   console.error('elevator_vectors.json does not match elevator.html\'s model; run node elevator_vectors.mjs --write and check the C++ side');
   process.exit(1);
-} else console.log(`elevator_vectors.json matches elevator.html's model (${vectors.length} vectors); workbench.html and stall.html carry the same model`);
+} else console.log(`elevator_vectors.json matches elevator.html's model (${vectors.length} vectors); workbench.html, stall.html and the site carry the same model`);

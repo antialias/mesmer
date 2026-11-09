@@ -153,7 +153,7 @@ const Flight=(()=>{
   const DEG=Math.PI/180,KT=0.514444,RHO=1.225,G=9.80665;
   const P={weight:11343,area:16.17,span:11.0,a2d:6.0,e:0.8,alpha0:-2.1*DEG,stallKt:53,
     width:4*DEG,postLift:1.15,maxAlpha:24*DEG,downwash:1.085,incidence:-2.5*DEG,tailArm:4.5,
-    groundAttitude:1.5*DEG,power:134000,prop:0.75,staticThrust:2400};
+    groundAttitude:1.5*DEG,power:134000,prop:0.75,staticThrust:2400,minKt:35};
   const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
   const AR=P.span*P.span/P.area;
   const slope=P.a2d/(1+P.a2d/(Math.PI*P.e*AR));                 // the wing's lift slope, per radian
@@ -184,7 +184,15 @@ const Flight=(()=>{
       return {ground:true,q,reversed,alphaW:aw,wingStalled:0,cl,n:1,asked:1,epsilon:reversed?0:eps,pitchRate:0,
         pitchShare:0,alphaT:tail,reported,thrust:thrust(throttle,0),critical,clMax};
     }
-    const V=Math.max(v,1),qw=.5*RHO*V*V,T=thrust(throttle,V);
+    // Flying. Slower than minKt nothing holds a 172 in the air and the chain's
+    // steady states end: the flight path's rate, g(n-1)/V, and its share at the
+    // tail, over V again, grow without limit as the speed goes. So the chain
+    // answers at minKt or faster. Under it the answer is minKt's, and what the
+    // flight's air gives fades with that air's pressure, (v/floor)², into the
+    // aircraft at no airspeed: the tail's angle the wash's alone, the one it
+    // has on its wheels, and the load factor 1. slow is that share, 1 at minKt
+    // and faster.
+    const floor=P.minKt*KT,V=Math.max(v,floor),qw=.5*RHO*V*V,T=thrust(throttle,V);
     // The angle the pull asks for: the lift for n times the weight, less the
     // thrust's lift share, on the straight line. Past the stall it is the angle
     // the held pull reaches when the lift no longer follows, up to maxAlpha:
@@ -197,9 +205,14 @@ const Flight=(()=>{
     const eps=P.downwash*2*cl/(Math.PI*AR);
     const pitchRate=G*(reached-1)/V+(Number.isFinite(c.pitchRate)?c.pitchRate:0)*DEG;
     const pitchShare=pitchRate*P.tailArm/V;
-    const tail=aw+P.incidence-eps+pitchShare;
-    return {ground:false,q:Elevator.tailQ(c.kt,throttle),reversed:false,alphaW:aw,wingStalled,cl,n:reached,asked:n,
-      epsilon:eps,pitchRate,pitchShare,alphaT:tail,reported:tail,thrust:T,critical,clMax};
+    const tail=aw+P.incidence-eps+pitchShare,q=Elevator.tailQ(c.kt,throttle);
+    if (v<floor) {
+      const slow=(v/floor)**2,still=of({kt:0,throttle,ground:true}).alphaT,faded=still+slow*(tail-still);
+      return {ground:false,q,reversed:false,alphaW:aw,wingStalled,cl,n:1+slow*(reached-1),asked:n,epsilon:eps,
+        pitchRate:slow*pitchRate,pitchShare:slow*pitchShare,alphaT:faded,reported:faded,thrust:T,critical,clMax,slow};
+    }
+    return {ground:false,q,reversed:false,alphaW:aw,wingStalled,cl,n:reached,asked:n,
+      epsilon:eps,pitchRate,pitchShare,alphaT:tail,reported:tail,thrust:T,critical,clMax,slow:1};
   };
   return {P,AR,slope,clMax,critical,stalledShare,lift,thrust,of};
 })();

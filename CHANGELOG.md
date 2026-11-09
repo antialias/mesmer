@@ -4,6 +4,26 @@ Versions are `0.1.0-alpha.N` while Mesmer is a preview. Each is a GitHub
 pre-release with a Windows zip, its SHA-256 in `SHA256SUMS`, and a build
 provenance attestation.
 
+## 0.1.0-alpha.2
+
+The first release built from the public repository, and so the first with a
+build provenance attestation. The plugin flies as alpha.1 does.
+
+- **Check where the zip came from.**
+  `gh attestation verify Mesmer-0.1.0-alpha.2.zip --repo antialias/mesmer`
+  shows GitHub built it from this source. alpha.1 was built while the
+  repository was private and has no attestation.
+- **Elevator pages: flying slower than it can fly.** On the elevator page, set
+  to flying at about 10 kt or less, the elevator ran to a stop as if the air
+  came from behind. The page's stand-in for X-Plane let the tail's angle grow
+  without limit as the airspeed went. Under 35 kt it now fades into the
+  aircraft with no airspeed: the tail in the prop wash alone, the elevator
+  hanging on its weight. The feel page and the stall simulator carry the same
+  model text. In the aircraft the plugin reads the tail's angle from X-Plane,
+  so the yoke was never affected.
+- **The README** leads with what Mesmer is: a simulator for each control
+  surface and a solver for the yoke.
+
 ## 0.1.0-alpha.1
 
 The first public preview: the plugin as it is flown today, published to find

@@ -7,7 +7,7 @@
 // stalled 0..1), never airspeed or roll rate: the plugin reads panels.
 //   node aileron_vectors.mjs          check aileron_vectors.json against the page, and the model's invariants
 //   node aileron_vectors.mjs --write  regenerate it after changing the model
-import {readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 
@@ -24,6 +24,20 @@ if (feel[1]!==found[1]) {
   const a=found[1].split('\n'),b=feel[1].split('\n');let i=0;while (i<a.length && a[i]===b[i]) i++;
   console.error(`workbench.html's aileron model differs from aileron.html's at model line ${i+1}:\n  aileron.html:   ${a[i]??'(end)'}\n  workbench.html: ${b[i]??'(end)'}\nCopy aileron.html's <script id="model"> block into workbench.html's <script id="aileron-model">.`);
   process.exit(1);
+}
+// mesmer.haunt.house's live demo runs the same block as a plain script,
+// public/site/www/js/aileron-model.js, byte for byte. The site stays in
+// flightsim (the public manifest leaves it out), so where public/site is
+// absent there is nothing to check.
+if (existsSync(join(here,'public','site'))) {
+  const site=join(here,'public','site','www','js','aileron-model.js');
+  const copy=existsSync(site)?readFileSync(site,'utf8'):null;
+  if (copy!==found[1]) {
+    const a=found[1].split('\n'),b=(copy??'').split('\n');let i=0;while (i<a.length && a[i]===b[i]) i++;
+    console.error(copy===null?`${site} is missing.`:`the site's aileron-model.js differs from aileron.html's model at model line ${i+1}:\n  aileron.html:     ${a[i]??'(end)'}\n  aileron-model.js: ${b[i]??'(end)'}`);
+    console.error('Write aileron.html\'s <script id="model"> block, exactly, to public/site/www/js/aileron-model.js.');
+    process.exit(1);
+  }
 }
 const P=M.P,DEG=M.DEG;
 const fail=why=>{console.error(why);process.exit(1);};
@@ -229,4 +243,4 @@ if (!flat.some(r=>r.centre_limited)||!vectors.some(v=>v.anchor_nm!==0)) fail('th
 const file=join(here,'aileron_vectors.json');
 if (process.argv.includes('--write')) {writeFileSync(file,text);console.log(`wrote ${vectors.length} vectors; invariants hold`);}
 else if (readFileSync(file,'utf8')!==text) fail('aileron_vectors.json does not match aileron.html\'s model; run node aileron_vectors.mjs --write and check the C++ side');
-else console.log(`aileron_vectors.json matches aileron.html's model (${vectors.length} vectors); invariants hold; workbench.html carries the same model`);
+else console.log(`aileron_vectors.json matches aileron.html's model (${vectors.length} vectors); invariants hold; workbench.html and the site carry the same model`);

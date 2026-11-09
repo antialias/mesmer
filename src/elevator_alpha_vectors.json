@@ -6243,6 +6243,126 @@
     0.954443873233,
     1
    ]
+  },
+  {
+   "name": "too slow to fly: 20 kt at cruise power",
+   "flight": {
+    "kt": 20,
+    "throttle": 0.75,
+    "n": 1
+   },
+   "trim": 0.15,
+   "wing_alpha_deg": 24,
+   "wing_stalled": 1,
+   "lift_coefficient": 0.854616549,
+   "load_factor": 0.773539363,
+   "downwash_deg": 4.519895996,
+   "pitch_share_deg": -1.766185211,
+   "tail_alpha_deg": 2.086863114,
+   "reported_deg": 2.086863114,
+   "reversed": false,
+   "tail_pa": 300.288041,
+   "rest_deg": -0.709074643,
+   "rest_counts": -303.889133,
+   "effective_at_rest_deg": 1.732325793,
+   "force_lb": [
+    44.617235488,
+    21.815916207,
+    10.347145523,
+    -1.16866713,
+    -10.663546894,
+    -20.190258332,
+    -35.616506807
+   ],
+   "stalled_at": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.146715778558
+   ]
+  },
+  {
+   "name": "flying with no airspeed, cruise power",
+   "flight": {
+    "kt": 0,
+    "throttle": 0.75,
+    "n": 1
+   },
+   "trim": 0.15,
+   "wing_alpha_deg": 24,
+   "wing_stalled": 1,
+   "lift_coefficient": 0.854616549,
+   "load_factor": 1,
+   "downwash_deg": 4.519895996,
+   "pitch_share_deg": 0,
+   "tail_alpha_deg": -2.511584731,
+   "reported_deg": -2.511584731,
+   "reversed": false,
+   "tail_pa": 310.078125,
+   "rest_deg": 1.819499071,
+   "rest_counts": 949.303863,
+   "effective_at_rest_deg": -1.601835195,
+   "force_lb": [
+    25.707645401,
+    26.80867342,
+    14.984397677,
+    3.099308003,
+    -6.709288345,
+    -16.559035376,
+    -36.379084878
+   ],
+   "stalled_at": [
+    0.87789618271,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "flying with no airspeed, engine off",
+   "flight": {
+    "kt": 0,
+    "throttle": 0,
+    "n": 1
+   },
+   "trim": 0.15,
+   "wing_alpha_deg": 24,
+   "wing_stalled": 1,
+   "lift_coefficient": 0.854616549,
+   "load_factor": 1,
+   "downwash_deg": 4.519895996,
+   "pitch_share_deg": 0,
+   "tail_alpha_deg": -2.511584731,
+   "reported_deg": -2.511584731,
+   "reversed": false,
+   "tail_pa": 0,
+   "rest_deg": 23,
+   "rest_counts": 12000,
+   "effective_at_rest_deg": 0,
+   "force_lb": [
+    3.628914607,
+    3.987915435,
+    4.079364683,
+    4.11,
+    4.08932061,
+    4.027490536,
+    3.783274948
+   ],
+   "stalled_at": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
   }
  ],
  "panels": [

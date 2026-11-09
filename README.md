@@ -1,6 +1,6 @@
 # Mesmer
 
-**Fly a Brunner CLS-E yoke in X-Plane 12 with one plugin and no CLS2Sim.**
+**The control surfaces, simulated. The yoke, solved.**
 
 ![Status: alpha](https://img.shields.io/badge/status-alpha_preview-orange)
 ![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue)
@@ -9,49 +9,45 @@
 
 ![The feel page in cruise: the elevator's hinge moments, the force across the yoke's travel and where the yoke rests](media/feel-page-cruise.jpg)
 
-Mesmer is an X-Plane 12 plugin that talks to the Brunner CLS-E force
-feedback yoke directly over USB. Install it, switch the yoke on, and it is
-X-Plane's pitch and roll in every aircraft. If you want, it also makes the yoke
-push back the way the aircraft's elevator and ailerons would.
+Mesmer is an X-Plane 12 plugin for the Brunner CLS-E force feedback yoke.
+It simulates the aircraft's elevator and ailerons from the air X-Plane
+reports over them: each surface's weight about its hinge, the air pressing
+on it, and the trim tab. Every update it solves for the spring and the
+resting position that put those loads in your hands, and sets the yoke's
+motors to them. One plugin, nothing else to install: no CLS2Sim, no
+bindings, no program running beside X-Plane.
 
 > **Alpha preview.** It works well on the one yoke it has been developed
 > on. It has not been tried on yours yet. Read [What works today](#what-works-today)
 > and [SAFETY.md](SAFETY.md) before you install it.
 
-## Why
+## What it does
 
-Today a Brunner yoke reaches X-Plane through CLS2Sim, a separate Windows
-program, and a connector plugin inside X-Plane. Pilots report that this link
-drops when X-Plane pauses, changes aircraft or loads scenery, and takes a few
-seconds to come back. That is a few seconds with no controls.
-
-Mesmer is one plugin inside X-Plane, with no program beside it. It is
-built to keep the yoke working on its own: through pauses, aircraft changes,
-the yoke being switched off and on, and the USB cable being pulled and
-plugged back in.
-
-## What you get
-
-- **The yoke works like any other control.** Pitch and roll in every
-  aircraft, with no bindings to set up.
+- **A simulator for each control surface.** X-Plane flies the aircraft.
+  Mesmer simulates only what your hand would hold: the hinge moment of the
+  elevator and of each aileron. Pitch firms up as the propwash builds on a
+  run-up. Slow flight is lighter than cruise. In a bank the wheel's resting
+  point leans a little into the turn.
+- **A solver for the yoke.** The CLS-E's drive is a spring with an
+  adjustable strength and centre. Each update Mesmer sets both, so the yoke
+  rests exactly where the simulation says and the force under your hand is
+  the simulation's, up to what the motors can give. Trimming moves where the
+  yoke comes to rest. [How it works](docs/how-it-works.md).
+- **Simple.** One plugin folder. Switch the yoke on and it is X-Plane's
+  pitch and roll in every aircraft, with no bindings to set up. Without
+  Mesmer, a Brunner yoke reaches X-Plane through CLS2Sim, a separate Windows
+  program, and its connector plugin.
 - **It looks after itself.** It finds the yoke, centres it, and gives you
   the controls. After a pause, an aircraft change, a power cycle or a
   replugged cable it carries on by itself. When it cannot, one line in the
   corner of the screen says what is wrong and what to do, and one click
   (*Retry*) fixes it.
-- **Optional force feel.** Switch it on and the yoke carries the loads of the
-  aircraft's own control surfaces. X-Plane flies the aircraft. The plugin
-  takes the air X-Plane reports over the tail and the ailerons, and models
-  only what your hand would hold: each surface's weight about its hinge,
-  the air pressing on it, and the trim tab. Pitch firms up as the propwash
-  builds on a run-up. Slow flight is lighter than cruise. Trimming moves
-  where the yoke comes to rest. [How it works](docs/how-it-works.md).
 - **The feel card in the sim.** A small card in X-Plane draws the elevator
   and ailerons as the plugin sees them, and how closely the yoke is matching
   them.
 - **The feel page in a browser.** Open it on a tablet or laptop beside the
-  cockpit. It shows the model live, has every figure as a knob, and keeps a
-  large *Stop yoke motors* button at the top.
+  cockpit. It shows the simulation live, has every figure as a knob, and
+  keeps a large *Stop yoke motors* button at the top.
 
 | In X-Plane | On a phone beside the yoke |
 |---|---|
@@ -92,7 +88,7 @@ This is a preview, so here is exactly where it stands.
 | **Pitch and roll** | Every aircraft. |
 | **The yoke's buttons and hat** | **Not supported yet.** The plugin does not read them, so they do not reach X-Plane through it. Use another device for buttons for now. |
 | **Trim, rudder, throttle** | Not the yoke's job here. Use your usual controls. The plugin reads X-Plane's pitch trim and never changes it. |
-| **Force feel** | **Experimental and off by default.** Every aircraft flies the Cessna 172's figures. The stock Cessna 172 SP gets the most detail (air over its tail and ailerons, propwash, the tail's angle and stall). Other aircraft get the 172's surfaces driven by indicated airspeed. |
+| **Force feel** | **Off until you switch it on**, each time X-Plane starts ([First flight](#first-flight)). Every aircraft flies the Cessna 172's figures. The stock Cessna 172 SP gets the most detail (air over its tail and ailerons, propwash, the tail's angle and stall). Other aircraft get the 172's surfaces driven by indicated airspeed. |
 | **Force calibration** | How hard the yoke pushes per pound is worked out, not yet measured with a scale. |
 | **Buffet at the stall** | In the feel page, off by default, untested with the motors on. |
 

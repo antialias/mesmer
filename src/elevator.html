@@ -152,7 +152,7 @@ input[type=range]{display:block;width:100%;min-width:0;height:40px;margin:0;acce
     The most lift, 1.54, is what the POH's flaps-up, power-off stall at 53 KCAS and 2550 lb needs <span class="tag">derived</span>, so the wing stalls at 17.3° to its chord <span class="tag">derived</span>; the POH's 48 KCAS is with full flap.
     Past that angle the stalled share grows to all of the wing over 4° and the lift blends into a flat plate's, 1.15·sin 2α (after Hoerner, Fluid-Dynamic Lift) <span class="tag">guessed</span>, so it falls. Past the stall the wing's angle is the one the held pull asks for, up to 24° <span class="tag">guessed</span> (the chain has no pitching moment to say where a full-up elevator holds a stalled wing), and the load factor actually reached is shown beside the one asked for: an accelerated stall shows as the angle passing 17.3° at a higher speed.
     <i>Downwash</i> behind the wing is 1.085 × 2·C<sub>L</sub>/(π·AR) <span class="tag">guessed</span>, chosen for dε/dα ≈ 0.42, within the 0.4–0.45 usual for a straight wing of this aspect ratio with the tail this far behind it (the textbook range, not a 172 measurement) <span class="tag">published</span>. It follows the lift, so when the wing stalls and its lift falls the downwash falls too and the tail's angle jumps.
-    <i>The tail's angle</i> is the wing's, plus the tail's setting against the wing, less the downwash, plus the pitch rate times the tail arm over the airspeed. The setting, −2.5°, is chosen so cruise gives the tail about −2° (a download) <span class="tag">guessed</span>; the tail arm 4.5 m <span class="tag">guessed</span> from the 172's drawings. A steady pull pitches at g(n−1)/V <span class="tag">derived</span>; the pitch-rate slider adds a sudden pull's on top.
+    <i>The tail's angle</i> is the wing's, plus the tail's setting against the wing, less the downwash, plus the pitch rate times the tail arm over the airspeed. The setting, −2.5°, is chosen so cruise gives the tail about −2° (a download) <span class="tag">guessed</span>; the tail arm 4.5 m <span class="tag">guessed</span> from the 172's drawings. A steady pull pitches at g(n−1)/V <span class="tag">derived</span>; the pitch-rate slider adds a sudden pull's on top. Slower than 35 kt nothing holds a 172 in the air and that rate grows without limit, so flying, the chain answers at 35 kt or faster <span class="tag">guessed</span>; under it what the flight's air gives fades with that air's pressure into the aircraft with no airspeed: the tail's angle the wash's alone, as on its wheels, and the load factor 1.
     <i>On its wheels</i> the wing sits at 1.5° <span class="tag">guessed</span> and the downwash is that angle's. A wind from behind meets the prop's wash head on: their pressures subtract <span class="tag">assumed</span>, and when the wind wins the air over the tail comes from behind.</p>
     <p><b style="color:var(--text);font-weight:500">The tail's angle of attack and the stall.</b>
     Float slope Ch<sub>α</sub> 0.20 per radian, <span class="tag">guessed</span>: no C172 figure was found. It is set at a little under half of the hinge slope Ch<sub>δ</sub>, the share plain flaps of this chord show in NACA's hinge-moment summaries (TR 721, Ames and Sears 1941, plain-flap and tab data; Report 868, as the aileron figures cite it), not read from a copy. The 172's elevator has horn balances at its tips, and a horn balance makes Ch<sub>α</sub> smaller, even zero or of the other sign, so the knob goes below zero. NASA TN D-7149, the source of Ch<sub>δ</sub>, may hold the same elevator's Ch<sub>α</sub>; not checked.
@@ -180,7 +180,7 @@ const Flight=(()=>{
   const DEG=Math.PI/180,KT=0.514444,RHO=1.225,G=9.80665;
   const P={weight:11343,area:16.17,span:11.0,a2d:6.0,e:0.8,alpha0:-2.1*DEG,stallKt:53,
     width:4*DEG,postLift:1.15,maxAlpha:24*DEG,downwash:1.085,incidence:-2.5*DEG,tailArm:4.5,
-    groundAttitude:1.5*DEG,power:134000,prop:0.75,staticThrust:2400};
+    groundAttitude:1.5*DEG,power:134000,prop:0.75,staticThrust:2400,minKt:35};
   const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
   const AR=P.span*P.span/P.area;
   const slope=P.a2d/(1+P.a2d/(Math.PI*P.e*AR));                 // the wing's lift slope, per radian
@@ -211,7 +211,15 @@ const Flight=(()=>{
       return {ground:true,q,reversed,alphaW:aw,wingStalled:0,cl,n:1,asked:1,epsilon:reversed?0:eps,pitchRate:0,
         pitchShare:0,alphaT:tail,reported,thrust:thrust(throttle,0),critical,clMax};
     }
-    const V=Math.max(v,1),qw=.5*RHO*V*V,T=thrust(throttle,V);
+    // Flying. Slower than minKt nothing holds a 172 in the air and the chain's
+    // steady states end: the flight path's rate, g(n-1)/V, and its share at the
+    // tail, over V again, grow without limit as the speed goes. So the chain
+    // answers at minKt or faster. Under it the answer is minKt's, and what the
+    // flight's air gives fades with that air's pressure, (v/floor)², into the
+    // aircraft at no airspeed: the tail's angle the wash's alone, the one it
+    // has on its wheels, and the load factor 1. slow is that share, 1 at minKt
+    // and faster.
+    const floor=P.minKt*KT,V=Math.max(v,floor),qw=.5*RHO*V*V,T=thrust(throttle,V);
     // The angle the pull asks for: the lift for n times the weight, less the
     // thrust's lift share, on the straight line. Past the stall it is the angle
     // the held pull reaches when the lift no longer follows, up to maxAlpha:
@@ -224,9 +232,14 @@ const Flight=(()=>{
     const eps=P.downwash*2*cl/(Math.PI*AR);
     const pitchRate=G*(reached-1)/V+(Number.isFinite(c.pitchRate)?c.pitchRate:0)*DEG;
     const pitchShare=pitchRate*P.tailArm/V;
-    const tail=aw+P.incidence-eps+pitchShare;
-    return {ground:false,q:Elevator.tailQ(c.kt,throttle),reversed:false,alphaW:aw,wingStalled,cl,n:reached,asked:n,
-      epsilon:eps,pitchRate,pitchShare,alphaT:tail,reported:tail,thrust:T,critical,clMax};
+    const tail=aw+P.incidence-eps+pitchShare,q=Elevator.tailQ(c.kt,throttle);
+    if (v<floor) {
+      const slow=(v/floor)**2,still=of({kt:0,throttle,ground:true}).alphaT,faded=still+slow*(tail-still);
+      return {ground:false,q,reversed:false,alphaW:aw,wingStalled,cl,n:1+slow*(reached-1),asked:n,epsilon:eps,
+        pitchRate:slow*pitchRate,pitchShare:slow*pitchShare,alphaT:faded,reported:faded,thrust:T,critical,clMax,slow};
+    }
+    return {ground:false,q,reversed:false,alphaW:aw,wingStalled,cl,n:reached,asked:n,
+      epsilon:eps,pitchRate,pitchShare,alphaT:tail,reported:tail,thrust:T,critical,clMax,slow:1};
   };
   return {P,AR,slope,clMax,critical,stalledShare,lift,thrust,of};
 })();
@@ -807,7 +820,8 @@ function frame(now) {
   if (dirty||(drawnAt!==null&&Math.abs(st.d-drawnAt)>0.2*DEG&&(tick%10)===0)) {drawForce(s);drawSpeed();drawnAt=st.d;dirty=false;
     const notes=[];
     if (ta.reversed) notes.push('Air from behind the tail: the air pushes the elevator away from trim, so it runs to a stop; from trim the weight starts it trailing edge down, the yoke forward.');
-    if (!f.ground&&f.wingStalled>0) notes.push(`Buffet: ${share(f.wingStalled)} of the wing is stalled.`);
+    if (!f.ground&&f.slow<1) notes.push(`Slower than ${Flight.P.minKt} kt it cannot fly: this is the chain at ${Flight.P.minKt} kt, fading with the airspeed into the aircraft with no air but the wash.`);
+    else if (!f.ground&&f.wingStalled>0) notes.push(`Buffet: ${share(f.wingStalled)} of the wing is stalled.`);
     $('revnote').hidden=!notes.length;$('revnote').textContent=notes.join(' ');}
   // tail
   elev.setAttribute('transform',`translate(${hinge.x},${hinge.y}) rotate(${-st.d/DEG})`);
