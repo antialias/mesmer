@@ -25,7 +25,7 @@
     The SHA256SUMS file that lists -Zip.
 
 .PARAMETER Tag
-    Install this release tag (for example v0.1.0-alpha.1) instead of the newest.
+    Install this release tag (for example v0.1.0) instead of the newest.
 
 .PARAMETER MoveConnector
     Yes or No: move CLS2Sim's XPlane10Connector out of the plugins folder

@@ -1,8 +1,18 @@
 # Changelog
 
-Versions are `0.1.0-alpha.N` while Mesmer is a preview. Each is a GitHub
+Versions are major.minor.patch: the patch number for fixes, the minor number
+for anything new. Below 1.0.0 Mesmer is a preview, and each release is a GitHub
 pre-release with a Windows zip, its SHA-256 in `SHA256SUMS`, and a build
-provenance attestation.
+provenance attestation. The first previews were numbered 0.1.0-alpha.1 to
+0.1.0-alpha.3; 0.1.0 follows them.
+
+## 0.1.0
+
+The first release numbered major.minor.patch. The plugin flies as 0.1.0-alpha.3 does.
+
+- **New version numbers.** 0.1.0 follows 0.1.0-alpha.3. From now on the patch number goes up for fixes and the minor number for anything new. Below 1.0.0 Mesmer is still a preview, and each release is still a GitHub pre-release. The opening paragraph of [the changelog](CHANGELOG.md) explains the scheme.
+- **"Preview" where it said "alpha".** The badge and the warning box near the top of [the README](README.md), the safety paragraph near its end, and the "No warranty" section of [SAFETY.md](SAFETY.md) now call Mesmer preview software. So does the header comment of `config/BrunnerDirect.ini`. The help for `install.ps1 -Tag` now gives `v0.1.0` as its example, and so does the Mesmer version field of the bug report form. Only the wording changed.
+- **Release tags.** [The release workflow](.github/workflows/release.yml) now builds only from tags of the form `v<major.minor.patch>`. It stops at any other tag with "is not v<major.minor.patch>".
 
 ## 0.1.0-alpha.3
 
