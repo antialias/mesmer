@@ -7,6 +7,11 @@
 #include <thread>
 
 namespace brunner {
+// Windows only (reader_win.cpp). Whether the bridge is plugged in but switched
+// off in Windows, and turning it back on: Windows' pnputil, run with the
+// administrator rights the pilot's account holds. Empty when started, else why not.
+bool bridge_disabled_in_windows();
+std::string turn_bridge_on_in_windows();
 class Reader {
 public:
     ~Reader() { stop(); }

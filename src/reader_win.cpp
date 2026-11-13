@@ -2,12 +2,15 @@
 #define NOMINMAX
 #include <windows.h>
 #include <setupapi.h>
+#include <cfgmgr32.h>
+#include <shellapi.h>
 extern "C" {
 #include <hidsdi.h>
 }
 #include "reader.hpp"
 #include "reference.hpp"
 #include "loading.hpp"
+#include "buttons.hpp"
 #include <functional>
 #include <cstdlib>
 #include <sstream>
@@ -16,11 +19,9 @@ extern "C" {
 
 namespace brunner {
 namespace {
-struct OperationCancelled : std::runtime_error {OperationCancelled():std::runtime_error("Reader stopped") {}};
-// USB-level failures: the link is gone or the controllers are silent. The
-// reader closes the bridge and keeps looking; nothing about the controllers'
-// state is concluded from them.
-struct TransportError : std::runtime_error {explicit TransportError(const char* what):std::runtime_error(what) {}};
+// USB-level failures (TransportError, core.hpp): the link is gone or the
+// controllers are silent. The reader closes the bridge and keeps looking;
+// nothing about the controllers' state is concluded from them.
 struct BridgeAbsent : TransportError {BridgeAbsent():TransportError("Expected one original CLS USB Bridge") {}};
 struct BridgeBusy : TransportError {BridgeBusy():TransportError("Yoke busy or unavailable; close CLS2Sim and Simux") {}};
 // A motor stop that could not be verified. Reported, never retried automatically.
@@ -47,6 +48,51 @@ bool descriptor_matches(HANDLE h) {
     return result==HIDP_STATUS_SUCCESS && caps.UsagePage==0xff00 && caps.Usage==0xff02
         && caps.InputReportByteLength==64 && caps.OutputReportByteLength==64;
 }
+} // namespace
+// The bridge's USB device when it is plugged in but switched off in Windows
+// (Device Manager's Disable device, or Disable-PnpDevice): still there, with
+// problem CM_PROB_DISABLED, and its HID collection gone, which the HID search
+// alone cannot tell from unplugged. Empty when it is not; any failure reads as
+// not. Its id carries the bridge's serial number: never logged.
+static std::wstring disabled_bridge() {
+    wchar_t usb[]=L"USB";
+    ULONG size=0;
+    if (CM_Get_Device_ID_List_SizeW(&size,usb,CM_GETIDLIST_FILTER_ENUMERATOR|CM_GETIDLIST_FILTER_PRESENT)!=CR_SUCCESS || size==0) return {};
+    std::vector<wchar_t> ids(size);
+    if (CM_Get_Device_ID_ListW(usb,ids.data(),size,CM_GETIDLIST_FILTER_ENUMERATOR|CM_GETIDLIST_FILTER_PRESENT)!=CR_SUCCESS) return {};
+    static constexpr wchar_t prefix[]=L"USB\\VID_25BB&PID_0081\\";
+    for (wchar_t* id=ids.data();*id;id+=wcslen(id)+1) {
+        if (_wcsnicmp(id,prefix,wcslen(prefix))!=0) continue;
+        DEVINST node=0;
+        ULONG status=0,problem=0;
+        if (CM_Locate_DevNodeW(&node,id,CM_LOCATE_DEVNODE_NORMAL)==CR_SUCCESS
+            && CM_Get_DevNode_Status(&status,&problem,node,0)==CR_SUCCESS
+            && (status&DN_HAS_PROBLEM) && problem==CM_PROB_DISABLED) return id;
+    }
+    return {};
+}
+bool bridge_disabled_in_windows() {return !disabled_bridge().empty();}
+// Windows' own pnputil from System32, elevated with the "runas" verb. On this
+// PC (2026-11-11) the pilot's account is an administrator and Windows raises it
+// without asking; where Windows asks first (the owner is fine with that), the
+// call waits for the answer. pnputil is launched, not waited for: the reader
+// finds the bridge within a second of it coming back.
+std::string turn_bridge_on_in_windows() {
+    const auto id=disabled_bridge();
+    if (id.empty()) return "The yoke's USB is not switched off in Windows";
+    wchar_t system[MAX_PATH];
+    const auto length=GetSystemDirectoryW(system,MAX_PATH);
+    if (length==0 || length>=MAX_PATH) return "Cannot find Windows' system folder";
+    const std::wstring tool=std::wstring(system)+L"\\pnputil.exe";
+    const std::wstring parameters=L"/enable-device \""+id+L"\"";
+    SHELLEXECUTEINFOW info{};
+    info.cbSize=sizeof(info);info.fMask=SEE_MASK_NOASYNC|SEE_MASK_FLAG_NO_UI;
+    info.lpVerb=L"runas";info.lpFile=tool.c_str();info.lpParameters=parameters.c_str();info.nShow=SW_HIDE;
+    if (ShellExecuteExW(&info)) return {};
+    return GetLastError()==ERROR_CANCELLED?"Turning the yoke's USB on was declined in Windows' prompt"
+        :"Windows could not start pnputil to turn the yoke's USB on";
+}
+namespace {
 std::wstring find_bridge() {
     GUID guid; HidD_GetHidGuid(&guid);
     DeviceList list{SetupDiGetClassDevsW(&guid,nullptr,nullptr,DIGCF_PRESENT|DIGCF_DEVICEINTERFACE)};
@@ -135,8 +181,8 @@ void sample(Bridge& bridge,Snapshot& s,const std::atomic<bool>& stop) {
         auto& a=s.axes[i];
         a.status=static_cast<std::uint16_t>(bridge.read(i+1,Object::status,stop));
         a.encoder=signed32(bridge.read(i+1,Object::encoder,stop));
-        a.position=signed32(bridge.read(i+1,Object::position,stop));
     }
+    sample_buttons(bridge,s,stop,s.sampled);
     s.connected=true;++s.cycles;
 }
 // Supervised one-shot test. Always stops both motors; never hands an enabled
@@ -511,7 +557,7 @@ void Reader::run() {
             // cleanup catches cancellation internally and still reports real faults.
             break;
         } catch (const BridgeAbsent& e) {
-            Snapshot absent;absent.message=e.what();publish(absent);
+            Snapshot absent;absent.message=e.what();absent.bridge_disabled=bridge_disabled_in_windows();publish(absent);
         } catch (const BridgeBusy& e) {
             Snapshot busy;busy.bridge_present=true;busy.bridge_busy=true;busy.message=e.what();publish(busy);
         } catch (const TransportError& e) {
