@@ -97,7 +97,7 @@ This is a preview, so here is exactly where it stands.
 Before you start, close X-Plane and CLS2Sim. The plugin needs the yoke's USB
 bridge to itself.
 
-1. **By hand.** Download the latest pre-release zip from
+1. **By hand.** Download the zip of the highest version from
    [Releases](https://github.com/antialias/mesmer/releases), check its
    SHA-256 against `SHA256SUMS`, and unzip it so that you have
    `X-Plane 12/Resources/plugins/BrunnerDirect/`. Then move CLS2Sim's own

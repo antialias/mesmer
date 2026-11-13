@@ -6,6 +6,14 @@ pre-release with a Windows zip, its SHA-256 in `SHA256SUMS`, and a build
 provenance attestation. The first previews were numbered 0.1.0-alpha.1 to
 0.1.0-alpha.3; 0.1.0 follows them.
 
+## 0.1.1
+
+This release fixes how the installer picks a release when you don't name one. The plugin flies as it does in 0.1.0.
+
+- **The installer takes the highest version.** GitHub doesn't list releases in version order. After 0.1.0 was published it listed v0.1.0-alpha.3 above v0.1.0, so `install.ps1` without `-Tag` could install 0.1.0-alpha.3 instead of 0.1.0. It now reads up to 100 releases and skips drafts and tags that aren't versions. It then takes the highest vMAJOR.MINOR.PATCH, comparing the numbers as numbers, and counts a tag ending in -alpha.N, -beta.N or -rc.N as older than the same number without it. If you ran it that way after 0.1.0 came out, run it again to get the newest release.
+- **Installing with an agent.** [INSTALL-WITH-AN-AGENT.md](INSTALL-WITH-AN-AGENT.md) now tells the agent to skip drafts and take the highest tag by the same rule, not the first release GitHub lists.
+- **Installing by hand.** [The README](README.md) and [docs/install.md](docs/install.md) now say to download the zip of the highest version, not the latest pre-release. docs/install.md also notes that 0.1.0 is newer than 0.1.0-alpha.3.
+
 ## 0.1.0
 
 The first release numbered major.minor.patch. The plugin flies as 0.1.0-alpha.3 does.
